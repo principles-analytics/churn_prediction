@@ -1,0 +1,180 @@
+---
+title: "Churn Prediction Analysis"
+author: "Pierre Saouter"
+date: "20 June 2025"
+format:
+  html:
+    code-fold: true
+---
+
+
+```{css}
+/*| echo: false */
+figcaption {
+  margin: auto;
+  text-align: center;
+}
+```
+
+## Context of the Analysis
+
+The below analysis was performed as part of an interview process with a private bank in Geneva. The overall objective is to conceive an analytics product based on churn prediction and generative AI to help bankers in anticipating and adressing potential churn cases.
+
+As part of this overarching goal, one of the most important question to start with is: can we actually build a predictive model to predict churn with sufficient accuracy.
+
+The analysis is based on a sample of data provided by the recruiter. To make the document readable and focused on key messages, we have abstracted most of the code throuhg functions. All the code can however be consulted in the associated GitHub repository. We source the relevant scripts in the code below.
+
+```{r setup, include=TRUE}
+source("0_churn_exploration.R")
+```
+
+## Data Exploration
+
+We load the data set provided by the recruiter, do some simple cleanup after some quality checks.
+
+```{r}
+data <- readr::read_delim("data/churn_data.csv", delim = ";", show_col_types = FALSE) |>
+  janitor::clean_names()
+```
+
+The `skimr::skim` function offers a great way to have a quick snapshot of key data characteristics.
+
+```{r}
+#| warning: false
+data |> skimr::skim()
+```
+
+Upon simple inspection, we can see that the data set is tidy and clean (one event observation per row, no missing values, no outrageaous value distribution). We'll go ahead 
+and go into analysing the data to get a better sense of predictors' relationship to the `churn` outcome. We'll use the `explore_data` function that wraps key calculations.
+
+```{r exploration}
+#| warning: false
+data_explore <- explore_data(data, class_var = "churn", excl_cols = "client_id", sel_cols = colnames(data))
+kableExtra::kable(data_explore$class_prop)
+```
+
+We notice in the table below that the sample is quiet small with a significant imbalance in the outcome (`r data_explore$class_prop$n` churn events). This is not a rare situation but given the small sample size, it does mean we might be limited in our predicting power and the type of modeling techniques we can allow ourselves to use.
+
+```{r corr_matrix, fig_corr_matrix}
+#| label: fig-line-plot
+#| fig-cap: "Variable correlation matrix"
+data_explore$corr_matrix |> 
+  corrplot::corrplot(
+   type = 'lower', 
+   order = 'hclust', 
+   tl.col = 'black',
+    cl.ratio = 0.2, 
+    tl.srt = 45,
+    addCoef.col = 'black',
+    diag = FALSE
+  )
+
+```
+
+A more surprising result is shown in @fig_corr_matrix where the correlation matrix reveals no co-linearity between any variables. Although you wouldn't necessarly expect a visually clear correlation with the churn, we would expect that the number of `products_held` is correlated to the number of `transactions`. This result is also clear from looking at a few scatter plots of variables.
+
+```{r scatter_plot, fig_scatter_plot}
+#| warning: false
+p1 <- build_scatter_plot(data |> 
+  dplyr::mutate(
+    churn = as.factor(churn)), 
+    "churn", "transactions", "products_held", legend = FALSE)
+p2 <- build_scatter_plot(data |> 
+  dplyr::mutate(
+    churn = as.factor(churn)), 
+    "churn", "contacts_with_advisor", "products_held")
+p3 <- build_scatter_plot(data |> 
+  dplyr::mutate(
+    churn = as.factor(churn)), 
+    "churn", "age", "income", legend = FALSE)
+p4 <- build_scatter_plot(data |> 
+  dplyr::mutate(
+    churn = as.factor(churn)), 
+    "churn", "contacts_with_advisor", "customer_satisfaction")
+gridExtra::grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
+```
+
+Other variables show the same characteristics. Although we could still imagine complex non-linear relationships between the predictors and the outcome, these observations tend to indicate the sample was not generated based on real-life variable distributions. The biggest risk is that any effort to train a model to predict churn based on this training data will be vain.
+
+For now, we will go ahead and set the `churn` variable as a factor variable for the rest of the analysis, since this is the categorical outcome to predict. For convenience, we will also remove the `client_id` variable which contains no predictive power (note that we might re-introduce this variable for easier interpretation of specific features in the results).
+
+```{r final_data_set}
+data <- data |>
+  dplyr::mutate(churn = as.factor(churn)) |>
+  dplyr::select(-client_id)
+```
+
+## Predictive modelling
+
+We are faced with a fairly standard binary classification problem. Given some of the limitations previously discussed, and given the small sample size, it would appear not necessary to go into too much complexity for the modeling part. However, our goal is also to show possible approaches if we were to be in a real world scenario.
+
+As such, we've decided to test 4 different models:
+
+* A logistic regression
+* A penalised logistic regression
+* A random forest
+* An XGBoost model
+
+All these models are good candidates for such problems. When yielding the same results and similar performance, the logistic regression would typically be favored due to easier interpretation of the results.
+
+We source the relevant scripts in the code below. The script provides convenience functions that wrap different steps of the modeling process: model building (we use the tidymodel interface), model training, model hyperparameter tuning, model validation and performance assessments.
+
+```{r setup_prediction, include=TRUE}
+#| warning: false
+source("1_churn_modeling.R")
+```
+
+For each model, we split the data in a training set (60% of the initial sample), a validation set used to tune model hyper-parameters when they exist (20%) and a test set (20%). For the hypeparameter tuningphase, we provide a grid of values to test but we admiditly did not spend too much time on studying the tuning results.
+
+The below table below displays a few performance results for the 4 models trained. Although the accuracy figure seems high, our ability to predit churn events is actually null (the sensitivity is zero accross all models). This comes back to our initial intuition that the sample provided does not reflect real world data and will fail to inform any prediction power given how the data was generated. Only the XGBoost approach presents a marginal performance in predicting churn events.
+
+```{r mode_lgr}
+#| warning: false
+lr_auc <- run_logistic_regression(data)
+lrp_auc <- run_penalised_logistic_regression(data)
+rf_auc <- run_random_forest(data)
+bdt_auc <- run_xgboost(data)
+
+performance_results <- dplyr::bind_rows(
+  lr_auc$perf_metrics,
+  lrp_auc$perf_metrics,
+  rf_auc$perf_metrics,
+  bdt_auc$perf_metrics
+) |>
+dplyr::mutate(.estimate = round(.estimate * 100, 2)) |>
+dplyr::select(
+  `Model` = "model",
+  `Performance Metric` = ".metric",
+  `Estimated Performance` = ".estimate"
+)
+
+kableExtra::kable(performance_results, align = 'llc')
+
+# kableExtra::kable(lgr$class_prop)
+# lgr$roc_curve_plot
+```
+
+Below, we also present the confusion matrices for the various models, which communicate the same information we already discussed, as well as the Receiver Operating Characteristic curves (RoC) which clearly show the curves follow a diagonal path, indicating no prediction power. 
+
+```{r conf_matrix}
+c1 <- lr_auc$conf_matrix |> autoplot(cm, type = "heatmap")
+c2 <- lrp_auc$conf_matrix |> autoplot(cm, type = "heatmap")
+c3 <- rf_auc$conf_matrix |> autoplot(cm, type = "heatmap")
+c4 <- bdt_auc$conf_matrix |> autoplot(cm, type = "heatmap")
+gridExtra::grid.arrange(c1, c2, c3, c4, ncol = 2, nrow = 2)
+```
+
+```{r roc_curve}
+bind_rows(lr_auc$roc_curve, lrp_auc$roc_curve, rf_auc$roc_curve, bdt_auc$roc_curve) |> 
+  ggplot(aes(x = 1 - specificity, y = sensitivity, col = model)) + 
+  geom_path(lwd = 1.5, alpha = 0.8) +
+  geom_abline(lty = 3) + 
+  coord_equal() + 
+  scale_color_viridis_d(option = "plasma", end = .6)
+```
+
+## Looking at a more optimistic example
+
+To make sure our modeling implementations are not the issue behind the above results, we used a churn data sample used in Kaggle competition. The sample represents churn data for an Iranian Telecommunications company. The data set can be found in the GitHub repository.
+
+## Areas for improvements
