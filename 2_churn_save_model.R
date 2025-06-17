@@ -18,19 +18,12 @@ bdt_auc <- run_xgboost(data)
 
 # explain the model
 
-vip_features <- colnames(data |> select(-churn))
 
-explainer_rf <- 
-  DALEXtra::explain_tidymodels(
-    bdt_auc$fit, 
-    data = data %>% select(all_of(vip_features)), 
-    y = as.integer(data$churn)
-  )
 
 set.seed(555)
 shap_values <-
   DALEX::predict_parts(
-    explainer = explainer_rf, 
+    explainer = bdt_auc$explainability$explainer, 
     new_observation = data[111,], 
     type = "shap",
     B = 20
@@ -51,4 +44,4 @@ vetiver_model <- vetiver::vetiver_model(
 )
 
 vetiver_pin_write(board, vetiver_model)
-
+pin_write(board,bdt_auc$explainability$explainer, "churn_model_xgboost/churn-explainer")

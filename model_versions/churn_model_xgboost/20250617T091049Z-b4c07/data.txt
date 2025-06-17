@@ -1,0 +1,19 @@
+file: churn_model_xgboost.rds
+file_size: 167306
+pin_hash: b4c076f71fe70b99
+type: rds
+title: 'churn_model_xgboost: a pinned list'
+description: |-
+  XGBoost model for churn prediction. Model trained on 60% of the data \
+    and hyperparameters tuned on 20% of the data. 20% of the data is used for final performancetesting
+tags: ~
+urls: ~
+created: 20250617T091049Z
+api_version: 1
+user:
+  required_pkgs:
+  - parsnip
+  - recipes
+  - workflows
+  - xgboost
+  renv_lock: ~

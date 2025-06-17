@@ -154,7 +154,7 @@ ggplot_imp <- function(...) {
 
 model_explainability <- function(fit, data) {
   
-  features <- train_data |> 
+  features <- data |> 
     dplyr::select(-churn)
 
   explainer <- 
@@ -172,7 +172,16 @@ model_explainability <- function(fit, data) {
 
   plot <- ggplot_imp(global_shap)
 
-  return(list(explainer = explainer, global_shap = global_shap, plot = plot))
+  return(
+    list(
+      "explainer" = explainer, 
+      "global_shap" = global_shap, 
+      "plot" = plot
+    )
+  )
+
+  # we coild also wprk on some global explanations from local explanations
+  # DALEX::model_profile()
 }
 
 run_logistic_regression <- function(data) { 
