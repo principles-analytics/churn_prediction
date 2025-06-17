@@ -44,4 +44,4 @@ vetiver_model <- vetiver::vetiver_model(
 )
 
 vetiver_pin_write(board, vetiver_model)
-pin_write(board,bdt_auc$explainability$explainer, "churn_model_xgboost/churn-explainer")
+pin_write(board,bdt_auc$explainability$explainer, "churn_model_xgboost_churn-explainer")
