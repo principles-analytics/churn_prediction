@@ -144,6 +144,7 @@ run_logistic_regression <- function(data) {
 
   return(
     list(
+      "fit" = churn_fit$fit,
       "fit_results" = churn_fit$fit_results,
       "predictions" = churn_fit_perf$predictions,
       "conf_matrix" = churn_fit_perf$conf_matrix,
@@ -197,6 +198,7 @@ run_penalised_logistic_regression <- function(data) {
 
   return(
     list(
+      "fit" = churn_fit$fit,
       "fit_results" = churn_fit$fit_results,
       "predictions" = churn_fit_perf$predictions,
       "conf_matrix" = churn_fit_perf$conf_matrix,
@@ -250,6 +252,7 @@ run_random_forest <- function(data) {
 
   return(
     list(
+      "fit" = churn_fit$fit,
       "fit_results" = churn_fit$fit_results,
       "predictions" = churn_fit_perf$predictions,
       "conf_matrix" = churn_fit_perf$conf_matrix,
@@ -306,6 +309,7 @@ run_xgboost <- function(data) {
 
   return(
     list(
+      "fit" = churn_fit$fit,
       "fit_results" = churn_fit$fit_results,
       "predictions" = churn_fit_perf$predictions,
       "conf_matrix" = churn_fit_perf$conf_matrix,
@@ -318,18 +322,3 @@ run_xgboost <- function(data) {
     )
   )
 }
-
-# lr_auc <- run_logistic_regression(data2 |> select(-client_id))
-# rf_auc <- run_random_forest(data2 |> select(-client_id))
-# bdt_auc <- run_xgboost(data2 |> select(-client_id))
-
-# lr_auc <- run_logistic_regression(data1 |> select(-client_id))
-# rf_auc <- run_random_forest(data1 |> select(-client_id))
-# bdt_auc <- run_xgboost(data1 |> select(-client_id))
-
-# bind_rows(rf_auc$auc, lr_auc$auc, bdt_auc$auc) |> 
-#   ggplot(aes(x = 1 - specificity, y = sensitivity, col = model)) + 
-#   geom_path(lwd = 1.5, alpha = 0.8) +
-#   geom_abline(lty = 3) + 
-#   coord_equal() + 
-#   scale_color_viridis_d(option = "plasma", end = .6)

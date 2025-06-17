@@ -18,15 +18,19 @@ figcaption {
 
 ## Context of the Analysis
 
-The below analysis was performed as part of an interview process with a private bank in Geneva. The overall objective is to conceive an analytics product based on churn prediction and generative AI to help bankers in anticipating and adressing potential churn cases.
+This analysis was conducted as part of an interview process with a private bank based in Geneva. The overarching goal is to design an analytics product that leverages churn prediction and generative AI to help bankers anticipate and address potential client departures.
 
-As part of this overarching goal, one of the most important question to start with is: can we actually build a predictive model to predict churn with sufficient accuracy.
+A key initial question in this process is: Can we build a predictive model that estimates churn with sufficient accuracy?
 
-The analysis is based on a sample of data provided by the recruiter. To make the document readable and focused on key messages, we have abstracted most of the code throuhg functions. All the code can however be consulted in the associated GitHub repository. We source the relevant scripts in the code below.
+The analysis is based on a sample dataset provided by the recruiter. To ensure clarity and keep the focus on key insights, most of the code has been abstracted into functions. However, all code is available in the accompanying GitHub repository [https://github.com/principles-analytics/churn_prediction](https://github.com/principles-analytics/churn_prediction). The relevant scripts are sourced in the code sections below.
 
 ```{r setup, include=TRUE}
 source("0_churn_exploration.R")
 ```
+
+## Important disclaimer
+
+Due to time constraints (my day job), I deliberatly did not spend too much time on fine-tuning the model to achieve the best performance. My goal is rather to present a typical approach to the prediction problem which needs to fit in the overall product delivered in the assigment, which will include serving this model and connecting its results with Generative AI features.
 
 ## Data Exploration
 
@@ -175,6 +179,82 @@ bind_rows(lr_auc$roc_curve, lrp_auc$roc_curve, rf_auc$roc_curve, bdt_auc$roc_cur
 
 ## Looking at a more optimistic example
 
-To make sure our modeling implementations are not the issue behind the above results, we used a churn data sample used in Kaggle competition. The sample represents churn data for an Iranian Telecommunications company. The data set can be found in the GitHub repository.
+To make sure our modeling implementations are not the issue behind the above results, we used a churn data sample used in Kaggle competition. The sample represents churn data for an Iranian Telecommunications company. The data set can be found in the [GitHub repository](https://github.com/principles-analytics/churn_prediction/tree/main/data) and at the [following URL](https://archive.ics.uci.edu/dataset/563/iranian%2Bchurn%2Bdataset).
 
-## Areas for improvements
+```{r load_new_data}
+data_telecom <- readr::read_csv("data/iranian_customer_churn.csv") |>
+  janitor::clean_names() |>
+  dplyr::mutate(churn = as.factor(churn))
+```
+
+We'll skip the data exploration and cleaning phase to simply show the results of applying our 4 classification models. Although the classification performance can probably be improved with some further tests and fine-tuning, the results are already extremely good out of the box. RoC curves indicate a much better performance achieved with the Random Forest and XGBoost approach.
+
+```{r tel_mode_new_data}
+#| warning: false
+tel_lr_auc <- run_logistic_regression(data_telecom)
+tel_lrp_auc <- run_penalised_logistic_regression(data_telecom)
+tel_rf_auc <- run_random_forest(data_telecom)
+tel_bdt_auc <- run_xgboost(data_telecom)
+
+performance_results <- dplyr::bind_rows(
+  tel_lr_auc$perf_metrics,
+  tel_lrp_auc$perf_metrics,
+  tel_rf_auc$perf_metrics,
+  tel_bdt_auc$perf_metrics
+) |>
+dplyr::mutate(.estimate = round(.estimate * 100, 2)) |>
+dplyr::select(
+  `Model` = "model",
+  `Performance Metric` = ".metric",
+  `Estimated Performance` = ".estimate"
+)
+
+kableExtra::kable(performance_results, align = 'llc')
+```
+
+
+```{r tel_conf_matrix}
+tel_c1 <- tel_lr_auc$conf_matrix |> autoplot(cm, type = "heatmap")
+tel_c2 <- tel_lrp_auc$conf_matrix |> autoplot(cm, type = "heatmap")
+tel_c3 <- tel_rf_auc$conf_matrix |> autoplot(cm, type = "heatmap")
+tel_c4 <- tel_bdt_auc$conf_matrix |> autoplot(cm, type = "heatmap")
+gridExtra::grid.arrange(tel_c1, tel_c2, tel_c3, tel_c4, ncol = 2, nrow = 2)
+```
+
+```{r tel_roc_curve}
+bind_rows(tel_lr_auc$roc_curve, tel_lrp_auc$roc_curve, tel_rf_auc$roc_curve, tel_bdt_auc$roc_curve) |> 
+  ggplot(aes(x = 1 - specificity, y = sensitivity, col = model)) + 
+  geom_path(lwd = 1.5, alpha = 0.8) +
+  geom_abline(lty = 3) + 
+  coord_equal() + 
+  scale_color_viridis_d(option = "plasma", end = .6)
+```
+
+## Important Considerations
+
+### Cost of Prediction Errors 
+
+We often focus on overall accuracy or sensitivity when evaluating prediction models. However, in churn prediction, the costs of false positives (predicting a client will churn when they won’t) and false negatives (failing to identify a client who actually churns) can vary significantly depending on the industry.
+
+In private banking, the cost of losing a client is typically much higher than the cost of providing extra attention to a client who had no intention of leaving. This contrasts with industries like travel booking—take Expedia, for instance—where falsely blocking a legitimate transaction due to suspected fraud can severely damage the customer experience and business.
+
+In our context, this means that minimizing false negatives—i.e., ensuring we don’t miss clients who are likely to churn—is particularly important and should be a key focus of our modeling efforts.
+
+### General Real World Constraints
+
+The private banking industry is a sensitive and highly regulated industry. This can have several impacts:
+
+* From a regulatory standpoint, our ability to use all the data relevant to a churn prediction is not guaranteed
+* AI and Generative AI solutions are receving dedicated attention from a regulatory perspective (FINMA, Swiss Tripartite platform, European AI act), and we should always stay informed
+* Even with good prediction accuracy, it is essential essential that we can present more than a class prediction and its probability to the banker
+
+The first point should be mitigated by the existance of strong governance practices which clarify policies around data usage.
+
+Regarding the last point, we have a few strategies in mind. In order to emphasize model interpretability to the end user (the banker notified of churn likelihood), the goal is essentially to highlight which predictors (features) contribute the most to a given prediction and translate these contributions into natural language.
+
+The models we suggest using offer fairly good interpretability. For logistic regressions, we can directly use the sign and magnitude of the prediction coefficients to signal the most influential features. For the decision tree-based models, we can use SHAP values (SHapley Additive exPlanations) which offer visually intuitive characterisations of feature contributions.
+
+We would map top-contributing features to "text codes" that explicit the reason for flagging a churn probability. If a feature crosses a threshold or is top-ranked for a client, attach its mapped reason. For example: **Flagged due to recent drop in assets under management and lack of contact in last 90 days.**
+
+
+

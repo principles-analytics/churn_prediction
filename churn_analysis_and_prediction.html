@@ -118,15 +118,19 @@ figcaption {
 </div>
 <section id="context-of-the-analysis" class="level2">
 <h2 class="anchored" data-anchor-id="context-of-the-analysis">Context of the Analysis</h2>
-<p>The below analysis was performed as part of an interview process with a private bank in Geneva. The overall objective is to conceive an analytics product based on churn prediction and generative AI to help bankers in anticipating and adressing potential churn cases.</p>
-<p>As part of this overarching goal, one of the most important question to start with is: can we actually build a predictive model to predict churn with sufficient accuracy.</p>
-<p>The analysis is based on a sample of data provided by the recruiter. To make the document readable and focused on key messages, we have abstracted most of the code throuhg functions. All the code can however be consulted in the associated GitHub repository. We source the relevant scripts in the code below.</p>
+<p>This analysis was conducted as part of an interview process with a private bank based in Geneva. The overarching goal is to design an analytics product that leverages churn prediction and generative AI to help bankers anticipate and address potential client departures.</p>
+<p>A key initial question in this process is: Can we build a predictive model that estimates churn with sufficient accuracy?</p>
+<p>The analysis is based on a sample dataset provided by the recruiter. To ensure clarity and keep the focus on key insights, most of the code has been abstracted into functions. However, all code is available in the accompanying GitHub repository <a href="https://github.com/principles-analytics/churn_prediction">https://github.com/principles-analytics/churn_prediction</a>. The relevant scripts are sourced in the code sections below.</p>
 <div class="cell">
 <details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"0_churn_exploration.R"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
+</section>
+<section id="important-disclaimer" class="level2">
+<h2 class="anchored" data-anchor-id="important-disclaimer">Important disclaimer</h2>
+<p>Due to time constraints (my day job), I deliberatly did not spend too much time on fine-tuning the model to achieve the best performance. My goal is rather to present a typical approach to the prediction problem which needs to fit in the overall product delivered in the assigment, which will include serving this model and connecting its results with Generative AI features.</p>
 </section>
 <section id="data-exploration" class="level2">
 <h2 class="anchored" data-anchor-id="data-exploration">Data Exploration</h2>
@@ -588,6 +592,199 @@ figcaption {
 <p><img src="churn_analysis_and_prediction_files/figure-html/roc_curve-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+</section>
+<section id="looking-at-a-more-optimistic-example" class="level2">
+<h2 class="anchored" data-anchor-id="looking-at-a-more-optimistic-example">Looking at a more optimistic example</h2>
+<p>To make sure our modeling implementations are not the issue behind the above results, we used a churn data sample used in Kaggle competition. The sample represents churn data for an Iranian Telecommunications company. The data set can be found in the <a href="https://github.com/principles-analytics/churn_prediction/tree/main/data">GitHub repository</a> and at the <a href="https://archive.ics.uci.edu/dataset/563/iranian%2Bchurn%2Bdataset">following URL</a>.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>data_telecom <span class="ot">&lt;-</span> readr<span class="sc">::</span><span class="fu">read_csv</span>(<span class="st">"data/iranian_customer_churn.csv"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  janitor<span class="sc">::</span><span class="fu">clean_names</span>() <span class="sc">|&gt;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">churn =</span> <span class="fu">as.factor</span>(churn))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stderr">
+<pre><code>Rows: 3150 Columns: 14
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+dbl (14): Call  Failure, Complains, Subscription  Length, Charge  Amount, Se...
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+</div>
+</div>
+<p>We’ll skip the data exploration and cleaning phase to simply show the results of applying our 4 classification models. Although the classification performance can probably be improved with some further tests and fine-tuning, the results are already extremely good out of the box. RoC curves indicate a much better performance achieved with the Random Forest and XGBoost approach.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>tel_lr_auc <span class="ot">&lt;-</span> <span class="fu">run_logistic_regression</span>(data_telecom)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>tel_lrp_auc <span class="ot">&lt;-</span> <span class="fu">run_penalised_logistic_regression</span>(data_telecom)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>tel_rf_auc <span class="ot">&lt;-</span> <span class="fu">run_random_forest</span>(data_telecom)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>tel_bdt_auc <span class="ot">&lt;-</span> <span class="fu">run_xgboost</span>(data_telecom)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>performance_results <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  tel_lr_auc<span class="sc">$</span>perf_metrics,</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  tel_lrp_auc<span class="sc">$</span>perf_metrics,</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  tel_rf_auc<span class="sc">$</span>perf_metrics,</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  tel_bdt_auc<span class="sc">$</span>perf_metrics</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">.estimate =</span> <span class="fu">round</span>(.estimate <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">2</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">select</span>(</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Model</span><span class="st">`</span> <span class="ot">=</span> <span class="st">"model"</span>,</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Performance Metric</span><span class="st">`</span> <span class="ot">=</span> <span class="st">".metric"</span>,</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Estimated Performance</span><span class="st">`</span> <span class="ot">=</span> <span class="st">".estimate"</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>kableExtra<span class="sc">::</span><span class="fu">kable</span>(performance_results, <span class="at">align =</span> <span class="st">'llc'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<colgroup>
+<col style="width: 41%">
+<col style="width: 26%">
+<col style="width: 31%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Model</th>
+<th style="text-align: left;">Performance Metric</th>
+<th style="text-align: center;">Estimated Performance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Logistic Regression</td>
+<td style="text-align: left;">accuracy</td>
+<td style="text-align: center;">89.21</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Logistic Regression</td>
+<td style="text-align: left;">kap</td>
+<td style="text-align: center;">53.36</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Logistic Regression</td>
+<td style="text-align: left;">sens</td>
+<td style="text-align: center;">50.00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Logistic Regression</td>
+<td style="text-align: left;">spec</td>
+<td style="text-align: center;">96.54</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Penalized Logistic Regression</td>
+<td style="text-align: left;">accuracy</td>
+<td style="text-align: center;">89.21</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Penalized Logistic Regression</td>
+<td style="text-align: left;">kap</td>
+<td style="text-align: center;">56.50</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Penalized Logistic Regression</td>
+<td style="text-align: left;">sens</td>
+<td style="text-align: center;">54.29</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Penalized Logistic Regression</td>
+<td style="text-align: left;">spec</td>
+<td style="text-align: center;">96.19</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Random Forest</td>
+<td style="text-align: left;">accuracy</td>
+<td style="text-align: center;">95.40</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Random Forest</td>
+<td style="text-align: left;">kap</td>
+<td style="text-align: center;">83.37</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Random Forest</td>
+<td style="text-align: left;">sens</td>
+<td style="text-align: center;">85.71</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Random Forest</td>
+<td style="text-align: left;">spec</td>
+<td style="text-align: center;">97.33</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">XGBoost</td>
+<td style="text-align: left;">accuracy</td>
+<td style="text-align: center;">94.92</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">XGBoost</td>
+<td style="text-align: left;">kap</td>
+<td style="text-align: center;">81.43</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">XGBoost</td>
+<td style="text-align: left;">sens</td>
+<td style="text-align: center;">82.86</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">XGBoost</td>
+<td style="text-align: left;">spec</td>
+<td style="text-align: center;">97.33</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>tel_c1 <span class="ot">&lt;-</span> tel_lr_auc<span class="sc">$</span>conf_matrix <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(cm, <span class="at">type =</span> <span class="st">"heatmap"</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>tel_c2 <span class="ot">&lt;-</span> tel_lrp_auc<span class="sc">$</span>conf_matrix <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(cm, <span class="at">type =</span> <span class="st">"heatmap"</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>tel_c3 <span class="ot">&lt;-</span> tel_rf_auc<span class="sc">$</span>conf_matrix <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(cm, <span class="at">type =</span> <span class="st">"heatmap"</span>)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>tel_c4 <span class="ot">&lt;-</span> tel_bdt_auc<span class="sc">$</span>conf_matrix <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(cm, <span class="at">type =</span> <span class="st">"heatmap"</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>gridExtra<span class="sc">::</span><span class="fu">grid.arrange</span>(tel_c1, tel_c2, tel_c3, tel_c4, <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="churn_analysis_and_prediction_files/figure-html/tel_conf_matrix-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(tel_lr_auc<span class="sc">$</span>roc_curve, tel_lrp_auc<span class="sc">$</span>roc_curve, tel_rf_auc<span class="sc">$</span>roc_curve, tel_bdt_auc<span class="sc">$</span>roc_curve) <span class="sc">|&gt;</span> </span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="dv">1</span> <span class="sc">-</span> specificity, <span class="at">y =</span> sensitivity, <span class="at">col =</span> model)) <span class="sc">+</span> </span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_path</span>(<span class="at">lwd =</span> <span class="fl">1.5</span>, <span class="at">alpha =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">lty =</span> <span class="dv">3</span>) <span class="sc">+</span> </span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_equal</span>() <span class="sc">+</span> </span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_viridis_d</span>(<span class="at">option =</span> <span class="st">"plasma"</span>, <span class="at">end =</span> .<span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="churn_analysis_and_prediction_files/figure-html/tel_roc_curve-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="important-considerations" class="level2">
+<h2 class="anchored" data-anchor-id="important-considerations">Important Considerations</h2>
+<section id="cost-of-prediction-errors" class="level3">
+<h3 class="anchored" data-anchor-id="cost-of-prediction-errors">Cost of Prediction Errors</h3>
+<p>We often focus on overall accuracy or sensitivity when evaluating prediction models. However, in churn prediction, the costs of false positives (predicting a client will churn when they won’t) and false negatives (failing to identify a client who actually churns) can vary significantly depending on the industry.</p>
+<p>In private banking, the cost of losing a client is typically much higher than the cost of providing extra attention to a client who had no intention of leaving. This contrasts with industries like travel booking—take Expedia, for instance—where falsely blocking a legitimate transaction due to suspected fraud can severely damage the customer experience and business.</p>
+<p>In our context, this means that minimizing false negatives—i.e., ensuring we don’t miss clients who are likely to churn—is particularly important and should be a key focus of our modeling efforts.</p>
+</section>
+<section id="general-real-world-constraints" class="level3">
+<h3 class="anchored" data-anchor-id="general-real-world-constraints">General Real World Constraints</h3>
+<p>The private banking industry is a sensitive and highly regulated industry. This can have several impacts:</p>
+<ul>
+<li>From a regulatory standpoint, our ability to use all the data relevant to a churn prediction is not guaranteed</li>
+<li>AI and Generative AI solutions are receving dedicated attention from a regulatory perspective (FINMA, Swiss Tripartite platform, European AI act), and we should always stay informed</li>
+<li>Even with good prediction accuracy, it is essential essential that we can present more than a class prediction and its probability to the banker</li>
+</ul>
+<p>The first point should be mitigated by the existance of strong governance practices which clarify policies around data usage.</p>
+<p>Regarding the last point, we have a few strategies in mind. In order to emphasize model interpretability to the end user (the banker notified of churn likelihood), the goal is essentially to highlight which predictors (features) contribute the most to a given prediction and translate these contributions into natural language.</p>
+<p>The models we suggest using offer fairly good interpretability. For logistic regressions, we can directly use the sign and magnitude of the prediction coefficients to signal the most influential features. For the decision tree-based models, we can use SHAP values (SHapley Additive exPlanations) which offer visually intuitive characterisations of feature contributions.</p>
+<p>We would map top-contributing features to “text codes” that explicit the reason for flagging a churn probability. If a feature crosses a threshold or is top-ranked for a client, attach its mapped reason. For example: <strong>Flagged due to recent drop in assets under management and lack of contact in last 90 days.</strong></p>
+</section>
 </section>
 
 </main>
