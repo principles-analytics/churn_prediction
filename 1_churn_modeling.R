@@ -6,18 +6,6 @@ library(yardstick)
 
 cores <- parallel::detectCores()
 
-# fpath1 <- "data/churn_data.csv"
-# fpath2 <- "data/churn_data_synth.csv"
-
-# data1 <- readr::read_delim(fpath1, delim = ";") |>
-#   janitor::clean_names() |>
-#   dplyr::mutate(churn = as.factor(churn))
-
-# data2 <- readr::read_csv(fpath2) |>
-#   janitor::clean_names() |>
-#   dplyr::mutate(churn = as.factor(churn))
-
-
 tune_parameters <- function(workflow, resamples, grid) {
 
   tuning_results <- workflow |> 
@@ -113,6 +101,79 @@ assess_model_performance <- function(fit, test_data, model_label) {
   )
 }
 
+ggplot_imp <- function(...) {
+  obj <- list(...)
+  metric_name <- attr(obj[[1]], "loss_name")
+  metric_lab <- paste(
+    metric_name, 
+    "after permutations\n(higher indicates more important)"
+  )
+  
+  full_vip <- dplyr::bind_rows(obj) %>%
+    dplyr::filter(variable != "_baseline_")
+  
+  perm_vals <- full_vip %>% 
+    dplyr::filter(variable == "_full_model_") %>% 
+    dplyr::group_by(label) %>% 
+    dplyr::summarise(dropout_loss = mean(dropout_loss))
+  
+  p <- full_vip %>%
+    dplyr::filter(variable != "_full_model_") %>% 
+    dplyr::mutate(variable = forcats::fct_reorder(variable, dropout_loss)) %>%
+    ggplot2::ggplot(aes(dropout_loss, variable))
+
+  if(length(obj) > 1) {
+    p <- p + 
+      ggplot2::facet_wrap(vars(label)) +
+      ggplot2::geom_vline(
+        data = perm_vals, 
+        aes(xintercept = dropout_loss, color = label),
+        linewidth = 1.4, 
+        lty = 2, 
+        alpha = 0.7) +
+      ggplot2::geom_boxplot(ggplot2::aes(color = label, fill = label), alpha = 0.2)
+  } else {
+    p <- p + 
+      ggplot2::geom_vline(
+        data = perm_vals, 
+        aes(xintercept = dropout_loss),
+        linewidth = 1.4, 
+        lty = 2, 
+        alpha = 0.7) +
+      ggplot2::geom_boxplot(fill = "#91CBD765", alpha = 0.4)
+    
+  }
+  p +
+    ggplot2::theme(legend.position = "none") +
+    ggplot2::labs(
+      x = metric_lab, 
+      y = NULL,  
+      fill = NULL,  
+      color = NULL)
+}
+
+model_explainability <- function(fit, data) {
+  
+  features <- train_data |> 
+    dplyr::select(-churn)
+
+  explainer <- 
+    DALEXtra::explain_tidymodels(
+      fit, 
+      data = features, 
+      y = as.integer(data$churn)
+    )
+  
+  global_shap <- 
+    DALEX::model_parts(
+      explainer = explainer, 
+      loss_function = DALEX::loss_root_mean_square 
+    )
+
+  plot <- ggplot_imp(global_shap)
+
+  return(list(explainer = explainer, global_shap = global_shap, plot = plot))
+}
 
 run_logistic_regression <- function(data) { 
   
@@ -142,6 +203,9 @@ run_logistic_regression <- function(data) {
   # let's predict the churn for the test data
   churn_fit_perf <- assess_model_performance(churn_fit$fit, test_data, "Logistic Regression")
 
+  # let's get some global model explainability
+  explainability <- model_explainability(churn_fit$fit, train_data)
+
   return(
     list(
       "fit" = churn_fit$fit,
@@ -153,7 +217,8 @@ run_logistic_regression <- function(data) {
       "roc_curve_plot" = churn_fit_perf$roc_curve_plot,
       "roc_auc_value" = churn_fit_perf$roc_auc_value,
       "lift_curve" = churn_fit_perf$lift_curve,
-      "lift_curve_plot" = churn_fit_perf$lift_curve_plot
+      "lift_curve_plot" = churn_fit_perf$lift_curve_plot,
+      "explainability" = explainability
     )
   )
 
@@ -196,6 +261,9 @@ run_penalised_logistic_regression <- function(data) {
   # let's predict the churn for the test data
   churn_fit_perf <- assess_model_performance(churn_fit$fit, test_data, "Penalized Logistic Regression")
 
+  # let's get some global model explainability
+  explainability <- model_explainability(churn_fit$fit, train_data)
+
   return(
     list(
       "fit" = churn_fit$fit,
@@ -207,7 +275,9 @@ run_penalised_logistic_regression <- function(data) {
       "roc_curve_plot" = churn_fit_perf$roc_curve_plot,
       "roc_auc_value" = churn_fit_perf$roc_auc_value,
       "lift_curve" = churn_fit_perf$lift_curve,
-      "lift_curve_plot" = churn_fit_perf$lift_curve_plot
+      "lift_curve_plot" = churn_fit_perf$lift_curve_plot,
+      "explainability" = explainability,
+      "explainability" = explainability
     )
   )
 
@@ -250,6 +320,9 @@ run_random_forest <- function(data) {
   # let's predict the churn for the test data
   churn_fit_perf <- assess_model_performance(churn_fit$fit, test_data, "Random Forest")
 
+  # let's get some global model explainability
+  explainability <- model_explainability(churn_fit$fit, train_data)
+
   return(
     list(
       "fit" = churn_fit$fit,
@@ -261,7 +334,8 @@ run_random_forest <- function(data) {
       "roc_curve_plot" = churn_fit_perf$roc_curve_plot,
       "roc_auc_value" = churn_fit_perf$roc_auc_value,
       "lift_curve" = churn_fit_perf$lift_curve,
-      "lift_curve_plot" = churn_fit_perf$lift_curve_plot
+      "lift_curve_plot" = churn_fit_perf$lift_curve_plot,
+      "explainability" = explainability
     )
   )
 
@@ -307,6 +381,9 @@ run_xgboost <- function(data) {
   # let's predict the churn for the test data
   churn_fit_perf <- assess_model_performance(churn_fit$fit, test_data, "XGBoost")
 
+  # let's get some global model explainability
+  explainability <- model_explainability(churn_fit$fit, train_data)
+
   return(
     list(
       "fit" = churn_fit$fit,
@@ -318,7 +395,8 @@ run_xgboost <- function(data) {
       "roc_curve_plot" = churn_fit_perf$roc_curve_plot,
       "roc_auc_value" = churn_fit_perf$roc_auc_value,
       "lift_curve" = churn_fit_perf$lift_curve,
-      "lift_curve_plot" = churn_fit_perf$lift_curve_plot
+      "lift_curve_plot" = churn_fit_perf$lift_curve_plot,
+      "explainability" = explainability
     )
   )
 }
