@@ -20,7 +20,10 @@ The user is already considering a specific client that was selected from a drop 
 
 The results of the model are given through the calculated SHAP values. You will pick the top 3 features that are contributing to the churn risk of the client the most (top positive sharp values) and explain these feature important through **reason codes**.
 
-SHAP values are shared in a table format here {{shap_data}}. The table has the following columns:
+SHAP values are shared in a table format here: 
+{{shap_data}}
+
+The table has the following columns:
 - Feature: The feature that is contributing to the churn risk of the client.
 - Value: The value of the feature.
 - Mean: The mean contribution of the feature to the churn risk of the client.

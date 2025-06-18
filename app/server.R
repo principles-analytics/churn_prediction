@@ -4,6 +4,7 @@ library(shinychat)
 library(DT)
 library(shinychat)
 library(workflows)
+library(knitr)
 
 source(here::here("utils.R"))
 
@@ -14,7 +15,12 @@ prompt_template <- paste(
   readLines(file.path(here::here("prompts", "prompts-explain-churn.md"))),
   collapse = "\n"
 )
-prompt <- glue::glue(prompt_template)
+
+chat <- ellmer::chat_openai(
+  system_prompt = "You are a helpful assistant that can help with churn inspection.", # prompt
+  #api_args = list(temperature = 0),
+  model = "gpt-4o-mini"
+)
 
 # Define server logic
 function(input, output, session) {
@@ -37,12 +43,6 @@ function(input, output, session) {
     dplyr::ungroup()
 
   DBI::dbDisconnect(con)
-
-  chat <- ellmer::chat_ollama(
-    system_prompt = prompt,
-    #api_args = list(temperature = 0),
-    model = "deepseek-r1"
-  )
 
   output$total_clients <- renderText({
     length(unique(churn_data$client_id))
@@ -281,34 +281,38 @@ function(input, output, session) {
         Q3 = "q3"
       )
   })
+  
 
-  # prompt <- ellmer::interpolate_file(
-  #   here::here("prompts", "prompts-explain-churn.md"), 
-  #   prompt_client_data(), 
-  #   prompt_client_shap_data())
-
-  #print(prompt)
-
-  # Welcome message for the chat
-  init_response <- chat$stream_async(
-    paste("Hello Pierre. Welcome. I have context loaded for ", "dddd", ".",
-    "Would you like to understand the churn risk of this client? You can also pick another 
-    client from the list and I will load the context for them.")
-  )
-  shinychat::chat_append("chat", init_response)
-
-  # observeEvent(input$chat_user_input, {
-  #   stream <- chat$stream_async(
-  #     input$chat_user_input,
-  #     !!!lapply(input$file, ellmer::content_image_file)
-  #   )
-  #   shinychat::chat_append("chat", stream)
-  # })
-
-  # chat <- ellmer::chat_ollama(
-  #   system_prompt = "You are a helpful assistant that can help with churn inspection.",
-  #   model = "deepseek-r1"
+  # init_response <- chat$chat(
+  #   "Tell me about the dataset"
   # )
+  
+  # shinychat::chat_append("chat", init_response)
 
-  # chat_mod_server("chat", chat)
+  observeEvent(input$chat_user_input, {
+
+    md_client_table <- knitr::kable(prompt_client_data(), format = "markdown")
+    md_client_table <- as.character(paste(md_client_table, collapse = "\n"))
+    md_shap_table <- knitr::kable(prompt_client_shap_data(), format = "markdown")
+    md_shap_table <- as.character(paste(md_shap_table, collapse = "\n"))
+
+    prompt <- interpolate_file(
+      here::here("prompts", "prompts-explain-churn.md"), 
+      client_data = md_client_table, 
+      shap_data = md_shap_table
+    )
+
+    prompt <- paste(prompt, input$chat_user_input)
+
+    tryCatch({
+      stream <- chat$stream_async(prompt)
+      if (!is.null(stream)) {
+        shinychat::chat_append("chat", stream)
+      }
+    }, error = function(e) {
+      message("Error in chat stream: ", e$message)
+      shinychat::chat_append("chat", "Sorry, there was an error processing your message. Please try again.")
+    })
+  })
+
 }

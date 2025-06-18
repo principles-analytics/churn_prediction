@@ -86,7 +86,7 @@ navbarPage(
             "Let's discuss your client's situation and see if we can help them stay with us.", 
             style = "text-align: center;"
           ),
-          shinychat::chat_ui("chat_interpret", height = "500px")
+          shinychat::chat_ui("chat", height = "500px")
         )
       )
     )
