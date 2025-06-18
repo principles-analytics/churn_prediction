@@ -2,6 +2,17 @@
 
 The repository contains all the material related to the case study for the churn mitigation project.
 
+A number of crucial scripts guide the analysis:
+
+* `0_churn_exploration.R` data exploration and preparation.
+* `1_churn_modeling.R` model training and evaluation
+* `2_churn_save_model.R` saves the final model and the information needed to explain the predictions (SHAP values through DALEXExtra explainer object).
+* `3_deploy_model.R` deploys the model to be served on an API endpoint.
+* `generate_app_data.R` generates synthetic client data to be used in the Shiny application for demonstration purposes.
+* `report_churn_prediction.Rmd` report that presents the results of the predictive modeling analysis.
+
+A number of sub-folders are available in the repository, as described below.
+
 ## Data
 
 The data used in the case study is available in the `data` folder. It contains:
@@ -19,3 +30,7 @@ The models are saved through the `2_churn_save_model.R` script in the top level 
 ## Application
 
 The `app` folder contains the Shiny application that allows to interact with the models and leverage an AI assistant to help with the churn inspection.
+
+## Prompt templates
+
+To guide the AI assistant, a number of prompt templates are available in the `prompts` folder and used to generate an enriched user prompt with the client data and the SHAP values.
