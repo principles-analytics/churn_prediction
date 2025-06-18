@@ -3,31 +3,46 @@ library(ellmer)
 library(shinychat)
 library(DT)
 library(shinychat)
+library(workflows)
+
+source(here::here("utils.R"))
 
 db_path <- here::here("data", "crm-db.sqlite")
+board <- pins::board_folder(here::here("model_versions"))
+
+prompt_template <- paste(
+  readLines(file.path(here::here("prompts", "prompts-explain-churn.md"))),
+  collapse = "\n"
+)
+prompt <- glue::glue(prompt_template)
 
 # Define server logic
 function(input, output, session) {
 
+  model_version_sel <- get_last_model_version(board, "xgb_model")
+  model_sel <- pins::pin_read(board = board, name = "xgb_model", version = model_version_sel)
+  model_explainer <- restore_explainer(board, "xgb_model", "churn", version = model_version_sel)
+  features <- model_sel$features
+
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
 
   churn_data <- dplyr::tbl(con, "churn_predictions") |>
-    dplyr::left_join(
-      dplyr::tbl(con, "clients"), 
-      by = "client_id"
-    ) |>
+    dplyr::left_join(dplyr::tbl(con, "clients"), by = "client_id") |>
     dplyr::collect() |>
     dplyr::mutate(name = paste(last_name, first_name)) 
   
   main_table <- churn_data |>
     dplyr::group_by(client_id) |>
-    dplyr::arrange(desc(prediction_timestamp)) |>
-    dplyr::slice(1) |>
+    dplyr::filter(model_version == model_version_sel) |>
     dplyr::ungroup()
 
   DBI::dbDisconnect(con)
 
-  sel_cols <- c("last_name", "first_name", "income", "products_held", "churn")
+  chat <- ellmer::chat_ollama(
+    system_prompt = prompt,
+    #api_args = list(temperature = 0),
+    model = "deepseek-r1"
+  )
 
   output$total_clients <- renderText({
     length(unique(churn_data$client_id))
@@ -51,18 +66,41 @@ function(input, output, session) {
       nrow()
   })
 
+  client_table_data <- reactiveVal()
+
+  observeEvent(input$sel_risk_profile, {
+    req(input$sel_risk_profile)
+
+    sel_risk <- c()
+    if ("High Risk" %in% input$sel_risk_profile) {
+      sel_risk <- c(sel_risk, "high")
+    }
+    if ("Medium Risk" %in% input$sel_risk_profile) {
+      sel_risk <- c(sel_risk, "medium")
+    }
+    if ("Low Risk" %in% input$sel_risk_profile) { 
+      sel_risk <- c(sel_risk, "low")
+    }
+    if ("Not at Risk" %in% input$sel_risk_profile) {
+      sel_risk <- c(sel_risk, "not-at-risk")
+    }
+
+    client_table_data(main_table |> dplyr::filter(risk_class %in% sel_risk))
+
+  })
+
   output$client_table <- DT::renderDataTable({
-    main_table  |>
+    client_table_data()  |>
       dplyr::select(name, income, products_held, risk_class) |>
-      dplyr::mutate(
-        risk_class = dplyr::case_when(
-          risk_class == "low" ~ sprintf('<div style="display: inline-block; background:#79ce42; color: black; border-radius: 10px; padding: 4px 12px; width: 80px; text-align:center;">%s</div>', risk_class),
-          risk_class == "medium" ~ sprintf('<div style="display: inline-block; background:#eaab72; color: black; border-radius: 10px; padding: 4px 12px; min-width: 80px; text-align:center;">%s</div>', risk_class),
-          risk_class == "high" ~ sprintf('<div style="display: inline-block; background:#f15353; color: black; border-radius: 10px; padding: 4px 12px; min-width: 80px; text-align:center;">%s</div>', risk_class),
-          risk_class == "not-at-risk" ~ sprintf('<div style="display: inline-block; background:#e5e5e5; black: white; border-radius: 10px; padding: 4px 12px; min-width: 80px; text-align:center;">%s</div>', risk_class),
-          TRUE ~ risk_class
-        )
-      ) |>
+      # dplyr::mutate(
+      #   risk_class = dplyr::case_when(
+      #     risk_class == "low" ~ sprintf('<div style="display: inline-block; background:#79ce42; color: black; border-radius: 10px; padding: 4px 12px; width: 80px; text-align:center;">%s</div>', risk_class),
+      #     risk_class == "medium" ~ sprintf('<div style="display: inline-block; background:#eaab72; color: black; border-radius: 10px; padding: 4px 12px; min-width: 80px; text-align:center;">%s</div>', risk_class),
+      #     risk_class == "high" ~ sprintf('<div style="display: inline-block; background:#f15353; color: black; border-radius: 10px; padding: 4px 12px; min-width: 80px; text-align:center;">%s</div>', risk_class),
+      #     risk_class == "not-at-risk" ~ sprintf('<div style="display: inline-block; background:#e5e5e5; black: white; border-radius: 10px; padding: 4px 12px; min-width: 80px; text-align:center;">%s</div>', risk_class),
+      #     TRUE ~ risk_class
+      #   )
+      # ) |>
       DT::datatable(
         options = list(
           pageLength = 11,
@@ -82,7 +120,7 @@ function(input, output, session) {
 
   output$churn_details <- DT::renderDataTable({
 
-    key_info <- main_table |>
+    key_info <- client_table_data() |>
       dplyr::slice(input$client_table_rows_selected) |>
       dplyr::select(
         name, age, income, contacts_with_advisor, 
@@ -102,14 +140,175 @@ function(input, output, session) {
         style = "bootstrap4",
         rownames = FALSE,
         colnames = c("Key", "Value")
-        #caption = "Client List with predicted churn"
       )
   })
 
-  chat <- ellmer::chat_ollama(
-    system_prompt = "You're a helpful assistant that can help with churn inspection.",
-    model = "deepseek-r1"
-  )
+  shap_calc <- reactive({
+    req(input$client_table_rows_selected)
+    sel_cols <- c(features, "churn")
+    sel_client <- main_table |>
+      dplyr::mutate(churn = as.factor(churn)) |>
+      dplyr::slice(input$client_table_rows_selected) |>
+      dplyr::select(dplyr::all_of(sel_cols))
 
-  chat_mod_server("chat", chat)
-} 
+    DALEX::predict_parts(
+      explainer = model_explainer, 
+      new_observation = sel_client[1, ], 
+      type = "shap",
+      B = 20
+    )
+  })
+
+  output$shap_values <- DT::renderDataTable({
+    
+    shap_calc() |>
+      tibble::as_tibble() |>
+      dplyr::group_by(variable_name, variable_value) |>
+      dplyr::summarise(
+        mean_contribution = mean(contribution),
+        median_contribution = median(contribution),
+        min_contribution = min(contribution),
+        max_contribution = max(contribution),
+        q1 = quantile(contribution, 0.25),
+        q3 = quantile(contribution, 0.75),
+        .groups = "drop"
+      ) |>
+      dplyr::ungroup() |>
+      dplyr::mutate(
+        mean_contribution = round(mean_contribution, 2),
+        median_contribution = round(median_contribution, 2),
+        min_contribution = round(min_contribution, 2),
+        max_contribution = round(max_contribution, 2),
+        q1 = round(q1, 2),
+        q3 = round(q3, 2)
+      ) |>
+      dplyr::arrange(desc(mean_contribution)) |>
+      dplyr::select(
+        Feature = "variable_name", 
+        Value = "variable_value", 
+        Mean = "mean_contribution", 
+        Median = "median_contribution",
+        Min = "min_contribution",
+        Max = "max_contribution",
+        Q1 = "q1",
+        Q3 = "q3"
+      ) |>
+      DT::datatable(
+        options = list(
+          pageLength = 10,
+          lengthChange = FALSE,
+          dom = "tp"
+        ),
+        class = "cell-border stripe",
+        style = "bootstrap4",
+        rownames = FALSE
+      )
+
+  })
+
+  output$plot_shap <- renderPlot({
+    plot(shap_calc())
+  })
+
+  ################## AI Agent ##################
+
+  # Initial population of choices
+  
+  new_names <- main_table |>
+    dplyr::arrange(desc(churn), desc(prediction_prob)) |>
+    dplyr::mutate(new_name = paste0(last_name, ", ", first_name, " (churn risk: ", risk_class, ")"))
+  
+  output$client_select <- renderUI({
+
+    selectizeInput(
+      "client_name_select",
+      label = "Select a client",
+      choices = unique(new_names$new_name),
+      selected = new_names$new_name[1]
+    )
+  })
+
+  prompt_client_data <- reactive({
+    req(input$client_name_select)
+    new_names |>
+      dplyr::filter(new_name == input$client_name_select) |>
+      t()
+  })
+
+  prompt_client_shap_data <- reactive({
+    req(input$client_name_select)
+    sel_cols <- c(features, "churn")
+    sel_client <- main_table |>
+      dplyr::mutate(churn = as.factor(churn)) |>
+      dplyr::slice(input$client_table_rows_selected) |>
+      dplyr::select(dplyr::all_of(sel_cols))
+
+    DALEX::predict_parts(
+      explainer = model_explainer,
+      new_observation = sel_client[1, ], 
+      type = "shap",
+      B = 20
+    ) |>
+      tibble::as_tibble() |>
+      dplyr::group_by(variable_name, variable_value) |>
+      dplyr::summarise(
+        mean_contribution = mean(contribution),
+        median_contribution = median(contribution),
+        min_contribution = min(contribution),
+        max_contribution = max(contribution),
+        q1 = quantile(contribution, 0.25),
+        q3 = quantile(contribution, 0.75),
+        .groups = "drop"
+      ) |>
+      dplyr::ungroup() |>
+      dplyr::mutate(
+        mean_contribution = round(mean_contribution, 2),
+        median_contribution = round(median_contribution, 2),
+        min_contribution = round(min_contribution, 2),
+        max_contribution = round(max_contribution, 2),
+        q1 = round(q1, 2),
+        q3 = round(q3, 2)
+      ) |>
+      dplyr::arrange(desc(mean_contribution)) |>
+      dplyr::select(
+        Feature = "variable_name", 
+        Value = "variable_value", 
+        Mean = "mean_contribution", 
+        Median = "median_contribution",
+        Min = "min_contribution",
+        Max = "max_contribution",
+        Q1 = "q1",
+        Q3 = "q3"
+      )
+  })
+
+  # prompt <- ellmer::interpolate_file(
+  #   here::here("prompts", "prompts-explain-churn.md"), 
+  #   prompt_client_data(), 
+  #   prompt_client_shap_data())
+
+  #print(prompt)
+
+  # Welcome message for the chat
+  init_response <- chat$stream_async(
+    paste("Hello Pierre. Welcome. I have context loaded for ", "dddd", ".",
+    "Would you like to understand the churn risk of this client? You can also pick another 
+    client from the list and I will load the context for them.")
+  )
+  shinychat::chat_append("chat", init_response)
+
+  # observeEvent(input$chat_user_input, {
+  #   stream <- chat$stream_async(
+  #     input$chat_user_input,
+  #     !!!lapply(input$file, ellmer::content_image_file)
+  #   )
+  #   shinychat::chat_append("chat", stream)
+  # })
+
+  # chat <- ellmer::chat_ollama(
+  #   system_prompt = "You are a helpful assistant that can help with churn inspection.",
+  #   model = "deepseek-r1"
+  # )
+
+  # chat_mod_server("chat", chat)
+}

@@ -213,10 +213,11 @@ run_logistic_regression <- function(data) {
   churn_fit_perf <- assess_model_performance(churn_fit$fit, test_data, "Logistic Regression")
 
   # let's get some global model explainability
-  explainability <- model_explainability(churn_fit$fit, train_data)
+  explainability <- model_explainability(churn_fit$fit, test_data)
 
   return(
     list(
+      "test_data" = test_data,
       "fit" = churn_fit$fit,
       "fit_results" = churn_fit$fit_results,
       "predictions" = churn_fit_perf$predictions,
@@ -271,10 +272,11 @@ run_penalised_logistic_regression <- function(data) {
   churn_fit_perf <- assess_model_performance(churn_fit$fit, test_data, "Penalized Logistic Regression")
 
   # let's get some global model explainability
-  explainability <- model_explainability(churn_fit$fit, train_data)
+  explainability <- model_explainability(churn_fit$fit, test_data)
 
   return(
     list(
+      "test_data" = test_data,
       "fit" = churn_fit$fit,
       "fit_results" = churn_fit$fit_results,
       "predictions" = churn_fit_perf$predictions,
@@ -330,10 +332,11 @@ run_random_forest <- function(data) {
   churn_fit_perf <- assess_model_performance(churn_fit$fit, test_data, "Random Forest")
 
   # let's get some global model explainability
-  explainability <- model_explainability(churn_fit$fit, train_data)
+  explainability <- model_explainability(churn_fit$fit, test_data)
 
   return(
     list(
+      "test_data" = test_data,
       "fit" = churn_fit$fit,
       "fit_results" = churn_fit$fit_results,
       "predictions" = churn_fit_perf$predictions,
@@ -391,10 +394,11 @@ run_xgboost <- function(data) {
   churn_fit_perf <- assess_model_performance(churn_fit$fit, test_data, "XGBoost")
 
   # let's get some global model explainability
-  explainability <- model_explainability(churn_fit$fit, train_data)
+  explainability <- model_explainability(churn_fit$fit, test_data)
 
   return(
     list(
+      "test_data" = test_data,
       "fit" = churn_fit$fit,
       "fit_results" = churn_fit$fit_results,
       "predictions" = churn_fit_perf$predictions,

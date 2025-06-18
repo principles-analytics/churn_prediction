@@ -1,0 +1,10 @@
+file: xgb_model.rds
+file_size: 198305
+pin_hash: e07a75389a39d5e0
+type: rds
+title: 'xgb_model: a pinned list'
+description: ~
+tags: ~
+urls: ~
+created: 20250618T124343Z
+api_version: 1
