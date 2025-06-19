@@ -6,7 +6,7 @@ library(shinychat)
 library(workflows)
 library(knitr)
 
-source(here::here("utils.R"))
+source(here::here("utils-pins.R"))
 
 db_path <- here::here("data", "crm-db.sqlite")
 board <- pins::board_folder(here::here("model_versions"))

@@ -25,7 +25,7 @@ A key initial question in this process is: Can we build a predictive model that 
 The analysis is based on a sample dataset provided by the recruiter. To ensure clarity and keep the focus on key insights, most of the code has been abstracted into functions. However, all code is available in the accompanying GitHub repository [https://github.com/principles-analytics/churn_prediction](https://github.com/principles-analytics/churn_prediction). The relevant scripts are sourced in the code sections below.
 
 ```{r setup, include=TRUE}
-source("0_churn_exploration.R")
+source(here::here("env-setup.R"))
 ```
 
 ## Important disclaimer
@@ -37,7 +37,7 @@ Due to time constraints (my day job), I deliberatly did not spend too much time 
 We load the data set provided by the recruiter, do some simple cleanup after some quality checks.
 
 ```{r}
-data <- readr::read_delim("data/churn_data.csv", delim = ";", show_col_types = FALSE) |>
+data <- readr::read_delim(fpath_data, delim = ";", show_col_types = FALSE) |>
   janitor::clean_names()
 ```
 
@@ -79,6 +79,7 @@ A more surprising result is shown in @fig_corr_matrix where the correlation matr
 
 ```{r scatter_plot, fig_scatter_plot}
 #| warning: false
+#| fig-cap: "Scatter de quelques variables sélectionnées."
 p1 <- build_scatter_plot(data |> 
   dplyr::mutate(
     churn = as.factor(churn)), 
@@ -123,11 +124,6 @@ All these models are good candidates for such problems. When yielding the same r
 
 We source the relevant scripts in the code below. The script provides convenience functions that wrap different steps of the modeling process: model building (we use the tidymodel interface), model training, model hyperparameter tuning, model validation and performance assessments.
 
-```{r setup_prediction, include=TRUE}
-#| warning: false
-source("1_churn_modeling.R")
-```
-
 For each model, we split the data in a training set (60% of the initial sample), a validation set used to tune model hyper-parameters when they exist (20%) and a test set (20%). For the hypeparameter tuningphase, we provide a grid of values to test but we admiditly did not spend too much time on studying the tuning results.
 
 The below table below displays a few performance results for the 4 models trained. Although the accuracy figure seems high, our ability to predit churn events is actually null (the sensitivity is zero accross all models). This comes back to our initial intuition that the sample provided does not reflect real world data and will fail to inform any prediction power given how the data was generated. Only the XGBoost approach presents a marginal performance in predicting churn events.
@@ -161,6 +157,7 @@ kableExtra::kable(performance_results, align = 'llc')
 Below, we also present the confusion matrices for the various models, which communicate the same information we already discussed, as well as the Receiver Operating Characteristic curves (RoC) which clearly show the curves follow a diagonal path, indicating no prediction power. 
 
 ```{r conf_matrix}
+#| fig-cap: "Churn confusion matrix: logistic regression (top-left), penalized logistic regression (top-right), random forest (bottom-left), XGBoost (bottom-right)"
 c1 <- lr_auc$conf_matrix |> autoplot(cm, type = "heatmap")
 c2 <- lrp_auc$conf_matrix |> autoplot(cm, type = "heatmap")
 c3 <- rf_auc$conf_matrix |> autoplot(cm, type = "heatmap")
@@ -169,6 +166,7 @@ gridExtra::grid.arrange(c1, c2, c3, c4, ncol = 2, nrow = 2)
 ```
 
 ```{r roc_curve}
+#| fig-cap: "Receiver Operation Characteristic Curves"
 bind_rows(lr_auc$roc_curve, lrp_auc$roc_curve, rf_auc$roc_curve, bdt_auc$roc_curve) |> 
   ggplot(aes(x = 1 - specificity, y = sensitivity, col = model)) + 
   geom_path(lwd = 1.5, alpha = 0.8) +
@@ -182,7 +180,7 @@ bind_rows(lr_auc$roc_curve, lrp_auc$roc_curve, rf_auc$roc_curve, bdt_auc$roc_cur
 To make sure our modeling implementations are not the issue behind the above results, we used a churn data sample used in Kaggle competition. The sample represents churn data for an Iranian Telecommunications company. The data set can be found in the [GitHub repository](https://github.com/principles-analytics/churn_prediction/tree/main/data) and at the [following URL](https://archive.ics.uci.edu/dataset/563/iranian%2Bchurn%2Bdataset).
 
 ```{r load_new_data}
-data_telecom <- readr::read_csv("data/iranian_customer_churn.csv") |>
+data_telecom <- readr::read_csv(here::here("data/iranian_customer_churn.csv"), show_col_types = FALSE) |>
   janitor::clean_names() |>
   dplyr::mutate(churn = as.factor(churn))
 ```
@@ -214,6 +212,7 @@ kableExtra::kable(performance_results, align = 'llc')
 
 
 ```{r tel_conf_matrix}
+#| fig-cap: "Churn confusion matrix: logistic regression (top-left), penalized logistic regression (top-right), random forest (bottom-left), XGBoost (bottom-right)"
 tel_c1 <- tel_lr_auc$conf_matrix |> autoplot(cm, type = "heatmap")
 tel_c2 <- tel_lrp_auc$conf_matrix |> autoplot(cm, type = "heatmap")
 tel_c3 <- tel_rf_auc$conf_matrix |> autoplot(cm, type = "heatmap")
@@ -222,6 +221,7 @@ gridExtra::grid.arrange(tel_c1, tel_c2, tel_c3, tel_c4, ncol = 2, nrow = 2)
 ```
 
 ```{r tel_roc_curve}
+#| fig-cap: "Receiver Operation Characteristic Curves"
 bind_rows(tel_lr_auc$roc_curve, tel_lrp_auc$roc_curve, tel_rf_auc$roc_curve, tel_bdt_auc$roc_curve) |> 
   ggplot(aes(x = 1 - specificity, y = sensitivity, col = model)) + 
   geom_path(lwd = 1.5, alpha = 0.8) +
