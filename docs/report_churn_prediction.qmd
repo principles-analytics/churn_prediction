@@ -230,6 +230,10 @@ bind_rows(tel_lr_auc$roc_curve, tel_lrp_auc$roc_curve, tel_rf_auc$roc_curve, tel
   scale_color_viridis_d(option = "plasma", end = .6)
 ```
 
+## Explainability
+
+No time to write this section for now but SHAP plots are available in the app and code can be viewed in the repo.
+
 ## Important Considerations
 
 ### Cost of Prediction Errors 
@@ -255,6 +259,8 @@ Regarding the last point, we have a few strategies in mind. In order to emphasiz
 The models we suggest using offer fairly good interpretability. For logistic regressions, we can directly use the sign and magnitude of the prediction coefficients to signal the most influential features. For the decision tree-based models, we can use SHAP values (SHapley Additive exPlanations) which offer visually intuitive characterisations of feature contributions.
 
 We would map top-contributing features to "text codes" that explicit the reason for flagging a churn probability. If a feature crosses a threshold or is top-ranked for a client, attach its mapped reason. For example: **Flagged due to recent drop in assets under management and lack of contact in last 90 days.**
+
+We attempt to implement this approach in our app prototype, leveraging generative AI.
 
 
 
