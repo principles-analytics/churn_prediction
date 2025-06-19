@@ -318,6 +318,10 @@ function(input, output, session) {
     )
   })
 
+  observeEvent(input$client_name_select, {
+    shinychat::chat_clear("chat")
+  })
+
   observeEvent(input$chat_user_input, {
 
     md_client_table <- knitr::kable(prompt_client_data(), format = "markdown")
