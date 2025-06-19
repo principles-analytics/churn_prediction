@@ -1,10 +1,24 @@
-library(shiny)
-library(ellmer)
-library(shinychat)
-library(DT)
-library(shinychat)
-library(workflows)
-library(knitr)
+suppressPackageStartupMessages(library(shiny))
+suppressPackageStartupMessages(library(ellmer))
+suppressPackageStartupMessages(library(shinychat))  
+suppressPackageStartupMessages(library(DT))
+suppressPackageStartupMessages(library(shinychat))
+suppressPackageStartupMessages(library(workflows))
+suppressPackageStartupMessages(library(knitr))
+suppressPackageStartupMessages(library(DALEX))
+suppressPackageStartupMessages(library(DALEXtra))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tibble))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(readr))
+suppressPackageStartupMessages(library(here))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(DBI))
+suppressPackageStartupMessages(library(RSQLite))
+suppressPackageStartupMessages(library(randomNames))
+suppressPackageStartupMessages(library(janitor))
+suppressPackageStartupMessages(library(markdown))
 
 source(here::here("utils-pins.R"))
 
@@ -35,7 +49,8 @@ function(input, output, session) {
   churn_data <- dplyr::tbl(con, "churn_predictions") |>
     dplyr::left_join(dplyr::tbl(con, "clients"), by = "client_id") |>
     dplyr::collect() |>
-    dplyr::mutate(name = paste(last_name, first_name)) 
+    dplyr::mutate(name = paste(last_name, first_name)) |>
+    dplyr::sample_n(1000)
   
   main_table <- churn_data |>
     dplyr::group_by(client_id) |>
@@ -108,7 +123,7 @@ function(input, output, session) {
           columnDefs = list(list(className = "dt-center", targets = c(1, 2, 3))),
           dom = "tp"
         ),
-        filter = "bottom",
+        #filter = "bottom", # this kills the rest of the app
         escape = FALSE,
         style = "bootstrap4",
         class = "cell-border stripe",
@@ -238,9 +253,14 @@ function(input, output, session) {
   prompt_client_shap_data <- reactive({
     req(input$client_name_select)
     sel_cols <- c(features, "churn")
+
+    client_sel <- new_names |>
+      dplyr::filter(new_name == input$client_name_select) |>
+      dplyr::select(name, risk_class)
+
     sel_client <- main_table |>
       dplyr::mutate(churn = as.factor(churn)) |>
-      dplyr::slice(input$client_table_rows_selected) |>
+      dplyr::filter(name == client_sel$name) |>
       dplyr::select(dplyr::all_of(sel_cols))
 
     DALEX::predict_parts(
@@ -293,7 +313,7 @@ function(input, output, session) {
       paste0(
         "Client: ", 
         client_sel$name, 
-        " (churn risk evaluted to ", 
+        " (churn risk evaluated to ", 
         client_sel$risk_class, ")")
     )
   })

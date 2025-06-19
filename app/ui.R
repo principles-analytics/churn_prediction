@@ -15,25 +15,33 @@ navbarPage(
     br(),
     fluidRow(
       column(3,
-        div(class = "well", style = "background-color: #2c3e50; color: white; border-radius: 10px; border-color: #cbe0f6; border-width: 5px;",
+        div(
+          class = "well", 
+          style = "background-color: #2c3e50; color: white; border-radius: 10px; border-color: #cbe0f6; border-width: 5px;",
           h4("Total Clients"),
           textOutput("total_clients")
         )
       ),
       column(3,
-        div(class = "well", style = "background-color: #2c3e50; color: white;border-radius: 10px; border-color: #da3b55; border-width: 5px;",
+        div(
+          class = "well", 
+          style = "background-color: #2c3e50; color: white;border-radius: 10px; border-color: #da3b55; border-width: 5px;",
           h4("High Risk Churn"),
           textOutput("high_churn_probability") 
         )
       ),
       column(3,
-        div(class = "well", style = "background-color: #2c3e50; color: white;border-radius: 10px; border-color: #e4950c; border-width: 5px;",
+        div(
+          class = "well", 
+          style = "background-color: #2c3e50; color: white;border-radius: 10px; border-color: #e4950c; border-width: 5px;",
           h4("Median Risk Churn"),
           textOutput("median_churn_probability")
         )
       ),
       column(3,
-        div(class = "well", style = "background-color: #2c3e50; color: white;border-radius: 10px; border-color: #84c522; border-width: 5px;", 
+        div(
+          class = "well", 
+          style = "background-color: #2c3e50; color: white;border-radius: 10px; border-color: #84c522; border-width: 5px;", 
           h4("Low Risk Churn"),
           textOutput("low_churn_probability")
         )
