@@ -10,7 +10,7 @@ A number of crucial scripts guide the analysis:
 
 These scripts leverage a number of utility functions in the root folder.
 
-The script `env-setup.R` sets up the environment, loads the necessary packages and sets up some globals. Obviously, in the future, we will leverage renv.
+The script `env-setup.R` sets up the environment, loads the necessary packages and sets up some globals. Obviously, in the future, we will leverage renv. You will alos need to have an OpenAI API key setup `OPENAI_API_KEY` in your .Renviron file to run the app.
 
 A number of sub-folders are available in the repository, as described below.
 
@@ -29,6 +29,8 @@ The `model_versions` folder contains the different versions of the models genera
 ## Application
 
 The `app` folder contains the Shiny application that allows to interact with the models and leverage an AI assistant to help with the churn inspection.
+
+Run the app with `shiny::runApp("app")`.
 
 ## Prompt templates
 
