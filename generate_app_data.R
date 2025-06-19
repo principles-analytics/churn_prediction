@@ -1,5 +1,10 @@
 
-generate_products <- function(n, prob_values = c(0.25, 0.25, 0.20, 0.15, 0.07, 0.05, 0.02, 0.01)) {
+generate_products <- function(
+  n, 
+  prob_values = c(0.25, 0.25, 0.20, 0.15, 0.07, 0.05, 0.02, 0.01)
+) {
+  products <- sample(min_products:max_products, n, replace = TRUE, prob = prob_values)
+  return(products)
   sample(1:8, n, replace = TRUE, prob = prob_values)
 }
 
@@ -59,6 +64,8 @@ generate_client_data <- function(n) {
   customer_satisfaction <- generate_customer_satisfaction(n, products_held)
 
   # Churn: proba plus forte si peu de produits, faible satisfaction, faible revenu
+  # At the end, not including the churn since we will use this
+  # as synthetetic data.
   churn_proba <- plogis(-1 + 0.9 * (products_held < 2) + 1.4 * (customer_satisfaction <= 2) - 0.00001 * income)
   churn <- rbinom(n, 1, churn_proba)
 
@@ -111,6 +118,8 @@ predict_churn <- function(data) {
   return(predictions)
 }
 
+# to time expensive for now. Will be calculated on 
+# the fly in the app.
 add_explanability <- function(data, predictions) {
 
   model_name <- "xgb_model"
@@ -191,30 +200,12 @@ save_to_db <- function(data, db_path, tbl_name) {
   DBI::dbWriteTable(con, tbl_name, data, overwrite = TRUE)
 }
 
-reason_codes <- c(
-  income = "Change in client's income level",
-  customer_satisfaction = "Customer satisfaction score has shifted",
-  products_held = "Number of banking products held changed",
-  age = "Client age is a contributing factor",
-  transactions = "Significant change in transaction frequency",
-  contacts_with_advisor = "Drop in contacts with advisor",
-  withdrawal_amount = "Unusual increase in withdrawal amounts",
-  assets_under_management = "Decrease in assets under management",
-  digital_channel_usage = "Lower usage of digital banking channels",
-  response_time = "Delayed response to advisor outreach",
-  meeting_attendance = "Fewer meetings attended recently",
-  investments = "Reduction in investment activity"
-)
-
 set.seed(42)
 n <- 5000
 data <- generate_client_data(n)
 predictions <- predict_churn(data)
-explanability <- add_explanability(data, predictions)
 table_name_clients <- "clients"
 table_name_predictions <- "churn_predictions"
-table_name_explanability <- "churn_explanability"
 db_path <- here::here("data", "crm-db.sqlite")
 save_to_db(data, db_path, table_name_clients)
 save_to_db(predictions, db_path, table_name_predictions)
-save_to_db(explanability, db_path, table_name_explanability)
