@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Pierre Saouter">
+<meta name="dcterms.date" content="2025-06-20">
+
+<title>Churn Prediction Analysis</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="report_churn_prediction_files/libs/clipboard/clipboard.min.js"></script>
+<script src="report_churn_prediction_files/libs/quarto-html/quarto.js"></script>
+<script src="report_churn_prediction_files/libs/quarto-html/popper.min.js"></script>
+<script src="report_churn_prediction_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="report_churn_prediction_files/libs/quarto-html/anchor.min.js"></script>
+<link href="report_churn_prediction_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="report_churn_prediction_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="report_churn_prediction_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="report_churn_prediction_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="report_churn_prediction_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Churn Prediction Analysis</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Pierre Saouter </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">June 20, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+</header>
+
+<div class="cell">
+<style type="text/css">
+figcaption {
+  margin: auto;
+  text-align: center;
+}
+</style>
+</div>
+<section id="context-of-the-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="context-of-the-analysis">Context of the Analysis</h2>
+<p>This analysis was conducted as part of an interview process with a private bank based in Geneva. The overarching goal is to design an analytics product that leverages churn prediction and generative AI to help bankers anticipate and address potential client departures.</p>
+<p>A key initial question in this process is: Can we build a predictive model that estimates churn with sufficient accuracy?</p>
+<p>The analysis is based on a sample dataset provided by the recruiter. To ensure clarity and keep the focus on key insights, most of the code has been abstracted into functions. However, all code is available in the accompanying GitHub repository <a href="https://github.com/principles-analytics/churn_prediction">https://github.com/principles-analytics/churn_prediction</a>. The relevant scripts are sourced in the code sections below.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"0_churn_exploration.R"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="important-disclaimer" class="level2">
+<h2 class="anchored" data-anchor-id="important-disclaimer">Important disclaimer</h2>
+<p>Due to time constraints (my day job), I deliberatly did not spend too much time on fine-tuning the model to achieve the best performance. My goal is rather to present a typical approach to the prediction problem which needs to fit in the overall product delivered in the assigment, which will include serving this model and connecting its results with Generative AI features.</p>
+</section>
+<section id="data-exploration" class="level2">
+<h2 class="anchored" data-anchor-id="data-exploration">Data Exploration</h2>
+<p>We load the data set provided by the recruiter, do some simple cleanup after some quality checks.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> readr<span class="sc">::</span><span class="fu">read_delim</span>(<span class="st">"data/churn_data.csv"</span>, <span class="at">delim =</span> <span class="st">";"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  janitor<span class="sc">::</span><span class="fu">clean_names</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The <code>skimr::skim</code> function offers a great way to have a quick snapshot of key data characteristics.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>data <span class="sc">|&gt;</span> skimr<span class="sc">::</span><span class="fu">skim</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<caption>Data summary</caption>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Name</td>
+<td style="text-align: left;">data</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Number of rows</td>
+<td style="text-align: left;">1000</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Number of columns</td>
+<td style="text-align: left;">8</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">_______________________</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Column type frequency:</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">numeric</td>
+<td style="text-align: left;">8</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">________________________</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Group variables</td>
+<td style="text-align: left;">None</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Variable type: numeric</strong></p>
+<table class="table table-sm table-striped small">
+<colgroup>
+<col style="width: 19%">
+<col style="width: 8%">
+<col style="width: 12%">
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 5%">
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 6%">
+<col style="width: 5%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">skim_variable</th>
+<th style="text-align: right;">n_missing</th>
+<th style="text-align: right;">complete_rate</th>
+<th style="text-align: right;">mean</th>
+<th style="text-align: right;">sd</th>
+<th style="text-align: right;">p0</th>
+<th style="text-align: right;">p25</th>
+<th style="text-align: right;">p50</th>
+<th style="text-align: right;">p75</th>
+<th style="text-align: right;">p100</th>
+<th style="text-align: left;">hist</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">client_id</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">500.50</td>
+<td style="text-align: right;">288.82</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">250.75</td>
+<td style="text-align: right;">500.5</td>
+<td style="text-align: right;">750.25</td>
+<td style="text-align: right;">1000</td>
+<td style="text-align: left;">▇▇▇▇▇</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">transactions</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">49.56</td>
+<td style="text-align: right;">29.29</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">24.00</td>
+<td style="text-align: right;">50.0</td>
+<td style="text-align: right;">75.00</td>
+<td style="text-align: right;">99</td>
+<td style="text-align: left;">▇▇▇▇▇</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">contacts_with_advisor</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">9.35</td>
+<td style="text-align: right;">5.77</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4.00</td>
+<td style="text-align: right;">9.0</td>
+<td style="text-align: right;">14.00</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: left;">▇▇▇▇▇</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">customer_satisfaction</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3.05</td>
+<td style="text-align: right;">1.42</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2.00</td>
+<td style="text-align: right;">3.0</td>
+<td style="text-align: right;">4.00</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">▇▇▆▇▇</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">products_held</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">4.95</td>
+<td style="text-align: right;">2.61</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3.00</td>
+<td style="text-align: right;">5.0</td>
+<td style="text-align: right;">7.00</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">▇▇▃▇▇</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">age</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">49.53</td>
+<td style="text-align: right;">18.06</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">34.00</td>
+<td style="text-align: right;">49.0</td>
+<td style="text-align: right;">65.00</td>
+<td style="text-align: right;">79</td>
+<td style="text-align: left;">▇▇▆▇▇</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">income</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">115225.31</td>
+<td style="text-align: right;">48666.43</td>
+<td style="text-align: right;">30287</td>
+<td style="text-align: right;">74412.00</td>
+<td style="text-align: right;">115922.5</td>
+<td style="text-align: right;">157444.50</td>
+<td style="text-align: right;">199823</td>
+<td style="text-align: left;">▇▇▇▇▇</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">churn</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.19</td>
+<td style="text-align: right;">0.39</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">▇▁▁▁▂</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>Upon simple inspection, we can see that the data set is tidy and clean (one event observation per row, no missing values, no outrageaous value distribution). We’ll go ahead and go into analysing the data to get a better sense of predictors’ relationship to the <code>churn</code> outcome. We’ll use the <code>explore_data</code> function that wraps key calculations.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>data_explore <span class="ot">&lt;-</span> <span class="fu">explore_data</span>(data, <span class="at">class_var =</span> <span class="st">"churn"</span>, <span class="at">excl_cols =</span> <span class="st">"client_id"</span>, <span class="at">sel_cols =</span> <span class="fu">colnames</span>(data))</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>kableExtra<span class="sc">::</span><span class="fu">kable</span>(data_explore<span class="sc">$</span>class_prop)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: right;">churn</th>
+<th style="text-align: right;">n</th>
+<th style="text-align: right;">prop</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">810</td>
+<td style="text-align: right;">0.81</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">190</td>
+<td style="text-align: right;">0.19</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>We notice in the table below that the sample is quiet small with a significant imbalance in the outcome (810, 190 churn events). This is not a rare situation but given the small sample size, it does mean we might be limited in our predicting power and the type of modeling techniques we can allow ourselves to use.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>data_explore<span class="sc">$</span>corr_matrix <span class="sc">|&gt;</span> </span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  corrplot<span class="sc">::</span><span class="fu">corrplot</span>(</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>   <span class="at">type =</span> <span class="st">'lower'</span>, </span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>   <span class="at">order =</span> <span class="st">'hclust'</span>, </span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>   <span class="at">tl.col =</span> <span class="st">'black'</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">cl.ratio =</span> <span class="fl">0.2</span>, </span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">tl.srt =</span> <span class="dv">45</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">addCoef.col =</span> <span class="st">'black'</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">diag =</span> <span class="cn">FALSE</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-line-plot" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="report_churn_prediction_files/figure-html/fig-line-plot-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;1: Variable correlation matrix</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>A more surprising result is shown in <span class="citation" data-cites="fig_corr_matrix">@fig_corr_matrix</span> where the correlation matrix reveals no co-linearity between any variables. Although you wouldn’t necessarly expect a visually clear correlation with the churn, we would expect that the number of <code>products_held</code> is correlated to the number of <code>transactions</code>. This result is also clear from looking at a few scatter plots of variables.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">build_scatter_plot</span>(data <span class="sc">|&gt;</span> </span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">churn =</span> <span class="fu">as.factor</span>(churn)), </span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"churn"</span>, <span class="st">"transactions"</span>, <span class="st">"products_held"</span>, <span class="at">legend =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">build_scatter_plot</span>(data <span class="sc">|&gt;</span> </span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">churn =</span> <span class="fu">as.factor</span>(churn)), </span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">"churn"</span>, <span class="st">"contacts_with_advisor"</span>, <span class="st">"products_held"</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">&lt;-</span> <span class="fu">build_scatter_plot</span>(data <span class="sc">|&gt;</span> </span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">churn =</span> <span class="fu">as.factor</span>(churn)), </span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">"churn"</span>, <span class="st">"age"</span>, <span class="st">"income"</span>, <span class="at">legend =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>p4 <span class="ot">&lt;-</span> <span class="fu">build_scatter_plot</span>(data <span class="sc">|&gt;</span> </span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">churn =</span> <span class="fu">as.factor</span>(churn)), </span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">"churn"</span>, <span class="st">"contacts_with_advisor"</span>, <span class="st">"customer_satisfaction"</span>)</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>gridExtra<span class="sc">::</span><span class="fu">grid.arrange</span>(p1, p2, p3, p4, <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="report_churn_prediction_files/figure-html/scatter_plot,%20fig_scatter_plot-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Other variables show the same characteristics. Although we could still imagine complex non-linear relationships between the predictors and the outcome, these observations tend to indicate the sample was not generated based on real-life variable distributions. The biggest risk is that any effort to train a model to predict churn based on this training data will be vain.</p>
+<p>For now, we will go ahead and set the <code>churn</code> variable as a factor variable for the rest of the analysis, since this is the categorical outcome to predict. For convenience, we will also remove the <code>client_id</code> variable which contains no predictive power (note that we might re-introduce this variable for easier interpretation of specific features in the results).</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> data <span class="sc">|&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">churn =</span> <span class="fu">as.factor</span>(churn)) <span class="sc">|&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>client_id)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="predictive-modelling" class="level2">
+<h2 class="anchored" data-anchor-id="predictive-modelling">Predictive modelling</h2>
+<p>We are faced with a fairly standard binary classification problem. Given some of the limitations previously discussed, and given the small sample size, it would appear not necessary to go into too much complexity for the modeling part. However, our goal is also to show possible approaches if we were to be in a real world scenario.</p>
+<p>As such, we’ve decided to test 4 different models:</p>
+<ul>
+<li>A logistic regression</li>
+<li>A penalised logistic regression</li>
+<li>A random forest</li>
+<li>An XGBoost model</li>
+</ul>
+<p>All these models are good candidates for such problems. When yielding the same results and similar performance, the logistic regression would typically be favored due to easier interpretation of the results.</p>
+<p>We source the relevant scripts in the code below. The script provides convenience functions that wrap different steps of the modeling process: model building (we use the tidymodel interface), model training, model hyperparameter tuning, model validation and performance assessments.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"1_churn_modeling.R"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>For each model, we split the data in a training set (60% of the initial sample), a validation set used to tune model hyper-parameters when they exist (20%) and a test set (20%). For the hypeparameter tuningphase, we provide a grid of values to test but we admiditly did not spend too much time on studying the tuning results.</p>
+<p>The below table below displays a few performance results for the 4 models trained. Although the accuracy figure seems high, our ability to predit churn events is actually null (the sensitivity is zero accross all models). This comes back to our initial intuition that the sample provided does not reflect real world data and will fail to inform any prediction power given how the data was generated. Only the XGBoost approach presents a marginal performance in predicting churn events.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>lr_auc <span class="ot">&lt;-</span> <span class="fu">run_logistic_regression</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Preparation of a new explainer is initiated
+  -&gt; model label       :  workflow  (  default  )
+  -&gt; data              :  749  rows  6  cols 
+  -&gt; data              :  tibble converted into a data.frame 
+  -&gt; target variable   :  749  values 
+  -&gt; predict function  :  yhat.workflow  will be used (  default  )
+  -&gt; predicted values  :  No value for predict function target column. (  default  )
+  -&gt; model_info        :  package tidymodels , ver. 1.3.0 , task classification (  default  ) 
+  -&gt; predicted values  :  numerical, min =  0.1477658 , mean =  0.1895861 , max =  0.2338768  
+  -&gt; residual function :  difference between y and yhat (  default  )
+  -&gt; residuals         :  numerical, min =  0.7661232 , mean =  1 , max =  1.841617  
+  A new explainer has been created!  </code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>lrp_auc <span class="ot">&lt;-</span> <span class="fu">run_penalised_logistic_regression</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Preparation of a new explainer is initiated
+  -&gt; model label       :  workflow  (  default  )
+  -&gt; data              :  600  rows  6  cols 
+  -&gt; data              :  tibble converted into a data.frame 
+  -&gt; target variable   :  600  values 
+  -&gt; predict function  :  yhat.workflow  will be used (  default  )
+  -&gt; predicted values  :  No value for predict function target column. (  default  )
+  -&gt; model_info        :  package tidymodels , ver. 1.3.0 , task classification (  default  ) 
+  -&gt; predicted values  :  numerical, min =  0.19 , mean =  0.19 , max =  0.19  
+  -&gt; residual function :  difference between y and yhat (  default  )
+  -&gt; residuals         :  numerical, min =  0.81 , mean =  1 , max =  1.81  
+  A new explainer has been created!  </code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>rf_auc <span class="ot">&lt;-</span> <span class="fu">run_random_forest</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Preparation of a new explainer is initiated
+  -&gt; model label       :  workflow  (  default  )
+  -&gt; data              :  600  rows  6  cols 
+  -&gt; data              :  tibble converted into a data.frame 
+  -&gt; target variable   :  600  values 
+  -&gt; predict function  :  yhat.workflow  will be used (  default  )
+  -&gt; predicted values  :  No value for predict function target column. (  default  )
+  -&gt; model_info        :  package tidymodels , ver. 1.3.0 , task classification (  default  ) 
+  -&gt; predicted values  :  numerical, min =  0.03517486 , mean =  0.1943557 , max =  0.6466169  
+  -&gt; residual function :  difference between y and yhat (  default  )
+  -&gt; residuals         :  numerical, min =  0.6528515 , mean =  0.9956443 , max =  1.620162  
+  A new explainer has been created!  </code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>bdt_auc <span class="ot">&lt;-</span> <span class="fu">run_xgboost</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Preparation of a new explainer is initiated
+  -&gt; model label       :  workflow  (  default  )
+  -&gt; data              :  600  rows  6  cols 
+  -&gt; data              :  tibble converted into a data.frame 
+  -&gt; target variable   :  600  values 
+  -&gt; predict function  :  yhat.workflow  will be used (  default  )
+  -&gt; predicted values  :  No value for predict function target column. (  default  )
+  -&gt; model_info        :  package tidymodels , ver. 1.3.0 , task classification (  default  ) 
+  -&gt; predicted values  :  numerical, min =  0.0003561974 , mean =  0.1899799 , max =  0.9427649  
+  -&gt; residual function :  difference between y and yhat (  default  )
+  -&gt; residuals         :  numerical, min =  0.5156779 , mean =  1.00002 , max =  1.660936  
+  A new explainer has been created!  </code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>performance_results <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  lr_auc<span class="sc">$</span>perf_metrics,</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  lrp_auc<span class="sc">$</span>perf_metrics,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  rf_auc<span class="sc">$</span>perf_metrics,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  bdt_auc<span class="sc">$</span>perf_metrics</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">.estimate =</span> <span class="fu">round</span>(.estimate <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">2</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">select</span>(</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Model</span><span class="st">`</span> <span class="ot">=</span> <span class="st">"model"</span>,</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Performance Metric</span><span class="st">`</span> <span class="ot">=</span> <span class="st">".metric"</span>,</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Estimated Performance</span><span class="st">`</span> <span class="ot">=</span> <span class="st">".estimate"</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>kableExtra<span class="sc">::</span><span class="fu">kable</span>(performance_results, <span class="at">align =</span> <span class="st">'llc'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<colgroup>
+<col style="width: 41%">
+<col style="width: 26%">
+<col style="width: 31%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Model</th>
+<th style="text-align: left;">Performance Metric</th>
+<th style="text-align: center;">Estimated Performance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Logistic Regression</td>
+<td style="text-align: left;">accuracy</td>
+<td style="text-align: center;">80.88</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Logistic Regression</td>
+<td style="text-align: left;">kap</td>
+<td style="text-align: center;">0.00</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Logistic Regression</td>
+<td style="text-align: left;">sens</td>
+<td style="text-align: center;">0.00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Logistic Regression</td>
+<td style="text-align: left;">spec</td>
+<td style="text-align: center;">100.00</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Penalized Logistic Regression</td>
+<td style="text-align: left;">accuracy</td>
+<td style="text-align: center;">81.50</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Penalized Logistic Regression</td>
+<td style="text-align: left;">kap</td>
+<td style="text-align: center;">0.00</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Penalized Logistic Regression</td>
+<td style="text-align: left;">sens</td>
+<td style="text-align: center;">0.00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Penalized Logistic Regression</td>
+<td style="text-align: left;">spec</td>
+<td style="text-align: center;">100.00</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Random Forest</td>
+<td style="text-align: left;">accuracy</td>
+<td style="text-align: center;">81.50</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Random Forest</td>
+<td style="text-align: left;">kap</td>
+<td style="text-align: center;">0.00</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Random Forest</td>
+<td style="text-align: left;">sens</td>
+<td style="text-align: center;">0.00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Random Forest</td>
+<td style="text-align: left;">spec</td>
+<td style="text-align: center;">100.00</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">XGBoost</td>
+<td style="text-align: left;">accuracy</td>
+<td style="text-align: center;">78.00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">XGBoost</td>
+<td style="text-align: left;">kap</td>
+<td style="text-align: center;">10.15</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">XGBoost</td>
+<td style="text-align: left;">sens</td>
+<td style="text-align: center;">16.22</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">XGBoost</td>
+<td style="text-align: left;">spec</td>
+<td style="text-align: center;">92.02</td>
+</tr>
+</tbody>
+</table>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># kableExtra::kable(lgr$class_prop)</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="co"># lgr$roc_curve_plot</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Below, we also present the confusion matrices for the various models, which communicate the same information we already discussed, as well as the Receiver Operating Characteristic curves (RoC) which clearly show the curves follow a diagonal path, indicating no prediction power.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>c1 <span class="ot">&lt;-</span> lr_auc<span class="sc">$</span>conf_matrix <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(cm, <span class="at">type =</span> <span class="st">"heatmap"</span>)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>c2 <span class="ot">&lt;-</span> lrp_auc<span class="sc">$</span>conf_matrix <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(cm, <span class="at">type =</span> <span class="st">"heatmap"</span>)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>c3 <span class="ot">&lt;-</span> rf_auc<span class="sc">$</span>conf_matrix <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(cm, <span class="at">type =</span> <span class="st">"heatmap"</span>)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>c4 <span class="ot">&lt;-</span> bdt_auc<span class="sc">$</span>conf_matrix <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(cm, <span class="at">type =</span> <span class="st">"heatmap"</span>)</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>gridExtra<span class="sc">::</span><span class="fu">grid.arrange</span>(c1, c2, c3, c4, <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="report_churn_prediction_files/figure-html/conf_matrix-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(lr_auc<span class="sc">$</span>roc_curve, lrp_auc<span class="sc">$</span>roc_curve, rf_auc<span class="sc">$</span>roc_curve, bdt_auc<span class="sc">$</span>roc_curve) <span class="sc">|&gt;</span> </span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="dv">1</span> <span class="sc">-</span> specificity, <span class="at">y =</span> sensitivity, <span class="at">col =</span> model)) <span class="sc">+</span> </span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_path</span>(<span class="at">lwd =</span> <span class="fl">1.5</span>, <span class="at">alpha =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">lty =</span> <span class="dv">3</span>) <span class="sc">+</span> </span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_equal</span>() <span class="sc">+</span> </span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_viridis_d</span>(<span class="at">option =</span> <span class="st">"plasma"</span>, <span class="at">end =</span> .<span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="report_churn_prediction_files/figure-html/roc_curve-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="looking-at-a-more-optimistic-example" class="level2">
+<h2 class="anchored" data-anchor-id="looking-at-a-more-optimistic-example">Looking at a more optimistic example</h2>
+<p>To make sure our modeling implementations are not the issue behind the above results, we used a churn data sample used in Kaggle competition. The sample represents churn data for an Iranian Telecommunications company. The data set can be found in the <a href="https://github.com/principles-analytics/churn_prediction/tree/main/data">GitHub repository</a> and at the <a href="https://archive.ics.uci.edu/dataset/563/iranian%2Bchurn%2Bdataset">following URL</a>.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>data_telecom <span class="ot">&lt;-</span> readr<span class="sc">::</span><span class="fu">read_csv</span>(<span class="st">"data/iranian_customer_churn.csv"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  janitor<span class="sc">::</span><span class="fu">clean_names</span>() <span class="sc">|&gt;</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">churn =</span> <span class="fu">as.factor</span>(churn))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stderr">
+<pre><code>Rows: 3150 Columns: 14
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+dbl (14): Call  Failure, Complains, Subscription  Length, Charge  Amount, Se...
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+</div>
+</div>
+<p>We’ll skip the data exploration and cleaning phase to simply show the results of applying our 4 classification models. Although the classification performance can probably be improved with some further tests and fine-tuning, the results are already extremely good out of the box. RoC curves indicate a much better performance achieved with the Random Forest and XGBoost approach.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>tel_lr_auc <span class="ot">&lt;-</span> <span class="fu">run_logistic_regression</span>(data_telecom)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Preparation of a new explainer is initiated
+  -&gt; model label       :  workflow  (  default  )
+  -&gt; data              :  2362  rows  13  cols 
+  -&gt; data              :  tibble converted into a data.frame 
+  -&gt; target variable   :  2362  values 
+  -&gt; predict function  :  yhat.workflow  will be used (  default  )
+  -&gt; predicted values  :  No value for predict function target column. (  default  )
+  -&gt; model_info        :  package tidymodels , ver. 1.3.0 , task classification (  default  ) 
+  -&gt; predicted values  :  numerical, min =  1.612204e-08 , mean =  0.1570703 , max =  0.9951566  
+  -&gt; residual function :  difference between y and yhat (  default  )
+  -&gt; residuals         :  numerical, min =  0.04256388 , mean =  1 , max =  1.987561  
+  A new explainer has been created!  </code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>tel_lrp_auc <span class="ot">&lt;-</span> <span class="fu">run_penalised_logistic_regression</span>(data_telecom)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Preparation of a new explainer is initiated
+  -&gt; model label       :  workflow  (  default  )
+  -&gt; data              :  1890  rows  13  cols 
+  -&gt; data              :  tibble converted into a data.frame 
+  -&gt; target variable   :  1890  values 
+  -&gt; predict function  :  yhat.workflow  will be used (  default  )
+  -&gt; predicted values  :  No value for predict function target column. (  default  )
+  -&gt; model_info        :  package tidymodels , ver. 1.3.0 , task classification (  default  ) 
+  -&gt; predicted values  :  numerical, min =  1.120343e-07 , mean =  0.1571427 , max =  0.9970817  
+  -&gt; residual function :  difference between y and yhat (  default  )
+  -&gt; residuals         :  numerical, min =  0.03135665 , mean =  1 , max =  1.991374  
+  A new explainer has been created!  </code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>tel_rf_auc <span class="ot">&lt;-</span> <span class="fu">run_random_forest</span>(data_telecom)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Preparation of a new explainer is initiated
+  -&gt; model label       :  workflow  (  default  )
+  -&gt; data              :  1890  rows  13  cols 
+  -&gt; data              :  tibble converted into a data.frame 
+  -&gt; target variable   :  1890  values 
+  -&gt; predict function  :  yhat.workflow  will be used (  default  )
+  -&gt; predicted values  :  No value for predict function target column. (  default  )
+  -&gt; model_info        :  package tidymodels , ver. 1.3.0 , task classification (  default  ) 
+  -&gt; predicted values  :  numerical, min =  0 , mean =  0.1564712 , max =  1  
+  -&gt; residual function :  difference between y and yhat (  default  )
+  -&gt; residuals         :  numerical, min =  0.3328063 , mean =  1.000672 , max =  1.616798  
+  A new explainer has been created!  </code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>tel_bdt_auc <span class="ot">&lt;-</span> <span class="fu">run_xgboost</span>(data_telecom)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Preparation of a new explainer is initiated
+  -&gt; model label       :  workflow  (  default  )
+  -&gt; data              :  1890  rows  13  cols 
+  -&gt; data              :  tibble converted into a data.frame 
+  -&gt; target variable   :  1890  values 
+  -&gt; predict function  :  yhat.workflow  will be used (  default  )
+  -&gt; predicted values  :  No value for predict function target column. (  default  )
+  -&gt; model_info        :  package tidymodels , ver. 1.3.0 , task classification (  default  ) 
+  -&gt; predicted values  :  numerical, min =  0.0005782843 , mean =  0.157136 , max =  0.9966121  
+  -&gt; residual function :  difference between y and yhat (  default  )
+  -&gt; residuals         :  numerical, min =  0.2707094 , mean =  1.000007 , max =  1.894651  
+  A new explainer has been created!  </code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>performance_results <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  tel_lr_auc<span class="sc">$</span>perf_metrics,</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  tel_lrp_auc<span class="sc">$</span>perf_metrics,</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  tel_rf_auc<span class="sc">$</span>perf_metrics,</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  tel_bdt_auc<span class="sc">$</span>perf_metrics</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">.estimate =</span> <span class="fu">round</span>(.estimate <span class="sc">*</span> <span class="dv">100</span>, <span class="dv">2</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">select</span>(</span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Model</span><span class="st">`</span> <span class="ot">=</span> <span class="st">"model"</span>,</span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Performance Metric</span><span class="st">`</span> <span class="ot">=</span> <span class="st">".metric"</span>,</span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">Estimated Performance</span><span class="st">`</span> <span class="ot">=</span> <span class="st">".estimate"</span></span>
+<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a>kableExtra<span class="sc">::</span><span class="fu">kable</span>(performance_results, <span class="at">align =</span> <span class="st">'llc'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<colgroup>
+<col style="width: 41%">
+<col style="width: 26%">
+<col style="width: 31%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Model</th>
+<th style="text-align: left;">Performance Metric</th>
+<th style="text-align: center;">Estimated Performance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Logistic Regression</td>
+<td style="text-align: left;">accuracy</td>
+<td style="text-align: center;">89.21</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Logistic Regression</td>
+<td style="text-align: left;">kap</td>
+<td style="text-align: center;">53.36</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Logistic Regression</td>
+<td style="text-align: left;">sens</td>
+<td style="text-align: center;">50.00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Logistic Regression</td>
+<td style="text-align: left;">spec</td>
+<td style="text-align: center;">96.54</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Penalized Logistic Regression</td>
+<td style="text-align: left;">accuracy</td>
+<td style="text-align: center;">89.21</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Penalized Logistic Regression</td>
+<td style="text-align: left;">kap</td>
+<td style="text-align: center;">56.50</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Penalized Logistic Regression</td>
+<td style="text-align: left;">sens</td>
+<td style="text-align: center;">54.29</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Penalized Logistic Regression</td>
+<td style="text-align: left;">spec</td>
+<td style="text-align: center;">96.19</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Random Forest</td>
+<td style="text-align: left;">accuracy</td>
+<td style="text-align: center;">95.40</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Random Forest</td>
+<td style="text-align: left;">kap</td>
+<td style="text-align: center;">83.37</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Random Forest</td>
+<td style="text-align: left;">sens</td>
+<td style="text-align: center;">85.71</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Random Forest</td>
+<td style="text-align: left;">spec</td>
+<td style="text-align: center;">97.33</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">XGBoost</td>
+<td style="text-align: left;">accuracy</td>
+<td style="text-align: center;">94.92</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">XGBoost</td>
+<td style="text-align: left;">kap</td>
+<td style="text-align: center;">81.43</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">XGBoost</td>
+<td style="text-align: left;">sens</td>
+<td style="text-align: center;">82.86</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">XGBoost</td>
+<td style="text-align: left;">spec</td>
+<td style="text-align: center;">97.33</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>tel_c1 <span class="ot">&lt;-</span> tel_lr_auc<span class="sc">$</span>conf_matrix <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(cm, <span class="at">type =</span> <span class="st">"heatmap"</span>)</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>tel_c2 <span class="ot">&lt;-</span> tel_lrp_auc<span class="sc">$</span>conf_matrix <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(cm, <span class="at">type =</span> <span class="st">"heatmap"</span>)</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>tel_c3 <span class="ot">&lt;-</span> tel_rf_auc<span class="sc">$</span>conf_matrix <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(cm, <span class="at">type =</span> <span class="st">"heatmap"</span>)</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>tel_c4 <span class="ot">&lt;-</span> tel_bdt_auc<span class="sc">$</span>conf_matrix <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(cm, <span class="at">type =</span> <span class="st">"heatmap"</span>)</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>gridExtra<span class="sc">::</span><span class="fu">grid.arrange</span>(tel_c1, tel_c2, tel_c3, tel_c4, <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="report_churn_prediction_files/figure-html/tel_conf_matrix-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(tel_lr_auc<span class="sc">$</span>roc_curve, tel_lrp_auc<span class="sc">$</span>roc_curve, tel_rf_auc<span class="sc">$</span>roc_curve, tel_bdt_auc<span class="sc">$</span>roc_curve) <span class="sc">|&gt;</span> </span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="dv">1</span> <span class="sc">-</span> specificity, <span class="at">y =</span> sensitivity, <span class="at">col =</span> model)) <span class="sc">+</span> </span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_path</span>(<span class="at">lwd =</span> <span class="fl">1.5</span>, <span class="at">alpha =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">lty =</span> <span class="dv">3</span>) <span class="sc">+</span> </span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_equal</span>() <span class="sc">+</span> </span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_viridis_d</span>(<span class="at">option =</span> <span class="st">"plasma"</span>, <span class="at">end =</span> .<span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="report_churn_prediction_files/figure-html/tel_roc_curve-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="important-considerations" class="level2">
+<h2 class="anchored" data-anchor-id="important-considerations">Important Considerations</h2>
+<section id="cost-of-prediction-errors" class="level3">
+<h3 class="anchored" data-anchor-id="cost-of-prediction-errors">Cost of Prediction Errors</h3>
+<p>We often focus on overall accuracy or sensitivity when evaluating prediction models. However, in churn prediction, the costs of false positives (predicting a client will churn when they won’t) and false negatives (failing to identify a client who actually churns) can vary significantly depending on the industry.</p>
+<p>In private banking, the cost of losing a client is typically much higher than the cost of providing extra attention to a client who had no intention of leaving. This contrasts with industries like travel booking—take Expedia, for instance—where falsely blocking a legitimate transaction due to suspected fraud can severely damage the customer experience and business.</p>
+<p>In our context, this means that minimizing false negatives—i.e., ensuring we don’t miss clients who are likely to churn—is particularly important and should be a key focus of our modeling efforts.</p>
+</section>
+<section id="general-real-world-constraints" class="level3">
+<h3 class="anchored" data-anchor-id="general-real-world-constraints">General Real World Constraints</h3>
+<p>The private banking industry is a sensitive and highly regulated industry. This can have several impacts:</p>
+<ul>
+<li>From a regulatory standpoint, our ability to use all the data relevant to a churn prediction is not guaranteed</li>
+<li>AI and Generative AI solutions are receving dedicated attention from a regulatory perspective (FINMA, Swiss Tripartite platform, European AI act), and we should always stay informed</li>
+<li>Even with good prediction accuracy, it is essential essential that we can present more than a class prediction and its probability to the banker</li>
+</ul>
+<p>The first point should be mitigated by the existance of strong governance practices which clarify policies around data usage.</p>
+<p>Regarding the last point, we have a few strategies in mind. In order to emphasize model interpretability to the end user (the banker notified of churn likelihood), the goal is essentially to highlight which predictors (features) contribute the most to a given prediction and translate these contributions into natural language.</p>
+<p>The models we suggest using offer fairly good interpretability. For logistic regressions, we can directly use the sign and magnitude of the prediction coefficients to signal the most influential features. For the decision tree-based models, we can use SHAP values (SHapley Additive exPlanations) which offer visually intuitive characterisations of feature contributions.</p>
+<p>We would map top-contributing features to “text codes” that explicit the reason for flagging a churn probability. If a feature crosses a threshold or is top-ranked for a client, attach its mapped reason. For example: <strong>Flagged due to recent drop in assets under management and lack of contact in last 90 days.</strong></p>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
