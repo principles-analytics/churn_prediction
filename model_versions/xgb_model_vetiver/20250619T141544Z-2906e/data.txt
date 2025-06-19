@@ -1,0 +1,19 @@
+file: xgb_model_vetiver.rds
+file_size: 167305
+pin_hash: 2906e30a0ce98f08
+type: rds
+title: 'xgb_model_vetiver: a pinned list'
+description: |-
+  XGBoost model for churn prediction. Model trained on 60% of the data \
+    and hyperparameters tuned on 20% of the data. 20% of the data is used for final performancetesting
+tags: ~
+urls: ~
+created: 20250619T141544Z
+api_version: 1
+user:
+  required_pkgs:
+  - parsnip
+  - recipes
+  - workflows
+  - xgboost
+  renv_lock: ~

@@ -50,33 +50,31 @@ function(input, output, session) {
     dplyr::left_join(dplyr::tbl(con, "clients"), by = "client_id") |>
     dplyr::collect() |>
     dplyr::mutate(name = paste(last_name, first_name)) |>
-    dplyr::sample_n(1000)
-  
-  main_table <- churn_data |>
-    dplyr::group_by(client_id) |>
     dplyr::filter(model_version == model_version_sel) |>
-    dplyr::ungroup()
+    dplyr::sample_n(1500)
+  
+  main_table <- churn_data
 
   DBI::dbDisconnect(con)
 
   output$total_clients <- renderText({
-    length(unique(churn_data$client_id))
+    length(unique(main_table$client_id))
   })
 
   output$low_churn_probability <- renderText({
-    churn_data |>
+    main_table |>
       dplyr::filter(risk_class == "low") |>
       nrow()
   })
 
   output$median_churn_probability <- renderText({
-    churn_data |>
+    main_table |>
       dplyr::filter(risk_class == "medium") |>
       nrow()
   })
 
   output$high_churn_probability <- renderText({
-    churn_data |>
+    main_table |>
       dplyr::filter(risk_class == "high") |>
       nrow()
   })
