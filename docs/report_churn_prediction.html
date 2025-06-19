@@ -774,6 +774,10 @@ figcaption {
 </div>
 </div>
 </section>
+<section id="explainability" class="level2">
+<h2 class="anchored" data-anchor-id="explainability">Explainability</h2>
+<p>No time to write this section for now but SHAP plots are available in the app and code can be viewed in the repo.</p>
+</section>
 <section id="important-considerations" class="level2">
 <h2 class="anchored" data-anchor-id="important-considerations">Important Considerations</h2>
 <section id="cost-of-prediction-errors" class="level3">
@@ -794,6 +798,7 @@ figcaption {
 <p>Regarding the last point, we have a few strategies in mind. In order to emphasize model interpretability to the end user (the banker notified of churn likelihood), the goal is essentially to highlight which predictors (features) contribute the most to a given prediction and translate these contributions into natural language.</p>
 <p>The models we suggest using offer fairly good interpretability. For logistic regressions, we can directly use the sign and magnitude of the prediction coefficients to signal the most influential features. For the decision tree-based models, we can use SHAP values (SHapley Additive exPlanations) which offer visually intuitive characterisations of feature contributions.</p>
 <p>We would map top-contributing features to “text codes” that explicit the reason for flagging a churn probability. If a feature crosses a threshold or is top-ranked for a client, attach its mapped reason. For example: <strong>Flagged due to recent drop in assets under management and lack of contact in last 90 days.</strong></p>
+<p>We attempt to implement this approach in our app prototype, leveraging generative AI.</p>
 </section>
 </section>
 
