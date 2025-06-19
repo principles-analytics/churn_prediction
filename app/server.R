@@ -92,15 +92,15 @@ function(input, output, session) {
   output$client_table <- DT::renderDataTable({
     client_table_data()  |>
       dplyr::select(name, income, products_held, risk_class) |>
-      # dplyr::mutate(
-      #   risk_class = dplyr::case_when(
-      #     risk_class == "low" ~ sprintf('<div style="display: inline-block; background:#79ce42; color: black; border-radius: 10px; padding: 4px 12px; width: 80px; text-align:center;">%s</div>', risk_class),
-      #     risk_class == "medium" ~ sprintf('<div style="display: inline-block; background:#eaab72; color: black; border-radius: 10px; padding: 4px 12px; min-width: 80px; text-align:center;">%s</div>', risk_class),
-      #     risk_class == "high" ~ sprintf('<div style="display: inline-block; background:#f15353; color: black; border-radius: 10px; padding: 4px 12px; min-width: 80px; text-align:center;">%s</div>', risk_class),
-      #     risk_class == "not-at-risk" ~ sprintf('<div style="display: inline-block; background:#e5e5e5; black: white; border-radius: 10px; padding: 4px 12px; min-width: 80px; text-align:center;">%s</div>', risk_class),
-      #     TRUE ~ risk_class
-      #   )
-      # ) |>
+      dplyr::mutate(
+        risk_class = dplyr::case_when(
+          risk_class == "low" ~ sprintf('<div style="display: inline-block; background:#84c522; color: black; border-radius: 10px; width: 80px; text-align:center;">%s</div>', risk_class),
+          risk_class == "medium" ~ sprintf('<div style="display: inline-block; background:#e4950c; color: black; border-radius: 10px; min-width: 80px; text-align:center;">%s</div>', risk_class),
+          risk_class == "high" ~ sprintf('<div style="display: inline-block; background:#da3b55; color: black; border-radius: 10px; min-width: 80px; text-align:center;">%s</div>', risk_class),
+          risk_class == "not-at-risk" ~ sprintf('<div style="display: inline-block; background:#cbe0f6; black: white; border-radius: 10px; min-width: 80px; text-align:center;">%s</div>', risk_class),
+          TRUE ~ risk_class
+        )
+      ) |>
       DT::datatable(
         options = list(
           pageLength = 11,
@@ -108,13 +108,13 @@ function(input, output, session) {
           columnDefs = list(list(className = "dt-center", targets = c(1, 2, 3))),
           dom = "tp"
         ),
+        filter = "bottom",
         escape = FALSE,
         style = "bootstrap4",
         class = "cell-border stripe",
         rownames = FALSE,
         colnames = c("Name", "Income", "# Products", "Churn Risk"),
         selection = list(mode = "single", selected = 1)
-        #caption = "Client List with predicted churn"
       )
   })
 
@@ -283,11 +283,20 @@ function(input, output, session) {
   })
   
 
-  # init_response <- chat$chat(
-  #   "Tell me about the dataset"
-  # )
-  
-  # shinychat::chat_append("chat", init_response)
+  output$selected_client <- renderText({
+    req(input$client_name_select)
+    client_sel <- new_names |>
+      dplyr::filter(new_name == input$client_name_select) |>
+      dplyr::select(name, risk_class)
+    
+    return(
+      paste0(
+        "Client: ", 
+        client_sel$name, 
+        " (churn risk evaluted to ", 
+        client_sel$risk_class, ")")
+    )
+  })
 
   observeEvent(input$chat_user_input, {
 
